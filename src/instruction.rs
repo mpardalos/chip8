@@ -6,39 +6,73 @@ pub type ShortVal = u8;
 
 #[derive(Debug)]
 pub enum Instruction {
+    /// Opcode: 0nnn
     SYS(u16),
+    /// Opcode: 00E0
     CLR,
+    /// Opcode: 00EE
     RTS,
+    /// Opcode: 1nnn
     JUMP(Addr),
+    /// Opcode: 2nnn
     CALL(Addr),
+    /// Opcode: 3xnn
     SKE(Reg, RegVal),
+    /// Opcode: 4xnn
     SKNE(Reg, RegVal),
+    /// Opcode: 5xy0
     SKRE(Reg, Reg),
+    /// Opcode: 6xnn
     LOAD(Reg, RegVal),
+    /// Opcode: 7xnn
     ADD(Reg, RegVal),
+    /// Opcode: 8xy0
     MOVE(Reg, Reg),
+    /// Opcode: 8xy1
     OR(Reg, Reg),
+    /// Opcode: 8xy2
     AND(Reg, Reg),
+    /// Opcode: 8xy3
     XOR(Reg, Reg),
+    /// Opcode: 8xy4
     ADDR(Reg, Reg),
+    /// Opcode: 8xy5
     SUB(Reg, Reg),
+    /// Opcode: 8xy6
     SHR(Reg, Reg),
+    /// Opcode: 8xyE
     SHL(Reg, Reg),
+    /// Opcode: 9xy0
     SKRNE(Reg, RegVal),
+    /// Opcode: Annn
     LOADI(Addr),
+    /// Opcode: Bnnn
     JUMPI(Addr),
+    /// Opcode: Cxnn
     RAND(Reg, RegVal),
+    /// Opcode: Dxyn
     DRAW(ShortVal, Reg, Reg),
+    /// Opcode: Ex9E
     SKPR(Reg),
+    /// Opcode: ExA1
     SKUP(Reg),
+    /// Opcode: Fx07
     MOVED(Reg),
+    /// Opcode: Fx0A
     KEYD(Reg),
+    /// Opcode: Fx15
     LOADD(Reg),
+    /// Opcode: Fx18
     LOADS(Reg),
+    /// Opcode: Fx1E
     ADDI(Reg),
+    /// Opcode: Fx29
     LDSPR(Reg),
+    /// Opcode: Fx33
     BCD(Reg),
+    /// Opcode: Fx55
     STOR(Reg),
+    /// Opcode: Fx65
     READ(Reg),
 }
 
