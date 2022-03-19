@@ -55,18 +55,23 @@ fn main() {
     let instruction_mem: Vec<u8> = fs::read(filename).expect("open input file");
 
     {
-        let instructions: Vec<Option<Instruction>> = instruction_mem
+        let instructions = instruction_mem
             .chunks_exact(2)
             .into_iter()
             .map(|a| u16::from_be_bytes([a[0], a[1]]))
-            .map(Instruction::from_bits)
-            .collect();
+            .map(|x| (x, Instruction::from_bits(x)))
+            .collect::<Vec<_>>();
 
         println!("---");
         println!("Instructions: ");
         let mut addr = 0x200;
-        for instruction in instructions {
-            println!("{:#x}: {:?}", addr, instruction);
+        for (bits, m_instruction) in instructions {
+            if let Some(i) = m_instruction {
+                println!("{:#x}: {:x} - {:?}", addr, bits, i);
+            } else {
+                println!("{:#x}: {:x} - ????", addr, bits);
+            }
+
             addr += 2;
         }
     }
