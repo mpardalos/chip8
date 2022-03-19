@@ -13,6 +13,20 @@ struct CHIP8 {
     mem: Box<[u8; 4096]>,
 }
 
+impl Display for CHIP8 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CHIP8")
+            .field("pc", &self.pc)
+            .field("idx", &self.idx)
+            .field("reg", &self.reg)
+            .field(
+                "instruction",
+                &Instruction::from_bits(self.instruction_word_at(self.pc)),
+            )
+            .finish()
+    }
+}
+
 impl CHIP8 {
     fn new(instruction_section: &[u8]) -> CHIP8 {
         let mut mem = Box::new([0; 4096]);
