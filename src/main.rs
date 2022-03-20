@@ -201,7 +201,7 @@ impl CHIP8 {
                         self.reg[0xf] = 0;
                     }
                     None => {
-                        self.reg[x as usize] = 0;
+                        self.reg[x as usize] = self.reg[x as usize].wrapping_add(self.reg[y as usize]);
                         self.reg[0xf] = 1;
                     }
                 }
@@ -226,7 +226,7 @@ impl CHIP8 {
                 self.advance(2)
             }
             ADD(x, n) => {
-                self.reg[x as usize] += n;
+                self.reg[x as usize] = self.reg[x as usize].wrapping_add(n);
                 self.advance(2)
             }
             // Subroutines
