@@ -68,6 +68,23 @@ enum Continue {
 impl CHIP8 {
     fn new(instruction_section: &[u8]) -> CHIP8 {
         let mut mem = Box::new([0; 4096]);
+        mem[0] = 0xF0;  mem[1] = 0x90;  mem[2] = 0x90;  mem[3] = 0x90;  mem[4] = 0xF0;
+        mem[5] = 0x20;  mem[6] = 0x60;  mem[7] = 0x20;  mem[8] = 0x20;  mem[9] = 0x70;
+        mem[10] = 0xF0; mem[11] = 0x10; mem[12] = 0xF0; mem[13] = 0x80; mem[14] = 0xF0;
+        mem[15] = 0xF0; mem[16] = 0x10; mem[17] = 0xF0; mem[18] = 0x10; mem[19] = 0xF0;
+        mem[20] = 0x90; mem[21] = 0x90; mem[22] = 0xF0; mem[23] = 0x10; mem[24] = 0x10;
+        mem[25] = 0xF0; mem[26] = 0x80; mem[27] = 0xF0; mem[28] = 0x10; mem[29] = 0xF0;
+        mem[30] = 0xF0; mem[31] = 0x80; mem[32] = 0xF0; mem[33] = 0x90; mem[34] = 0xF0;
+        mem[35] = 0xF0; mem[36] = 0x10; mem[37] = 0x20; mem[38] = 0x40; mem[39] = 0x40;
+        mem[40] = 0xF0; mem[41] = 0x90; mem[42] = 0xF0; mem[43] = 0x90; mem[44] = 0xF0;
+        mem[45] = 0xF0; mem[46] = 0x90; mem[47] = 0xF0; mem[48] = 0x10; mem[49] = 0xF0;
+        mem[50] = 0xF0; mem[51] = 0x90; mem[52] = 0xF0; mem[53] = 0x90; mem[54] = 0x90;
+        mem[55] = 0xE0; mem[56] = 0x90; mem[57] = 0xE0; mem[58] = 0x90; mem[59] = 0xE0;
+        mem[60] = 0xF0; mem[61] = 0x80; mem[62] = 0x80; mem[63] = 0x80; mem[64] = 0xF0;
+        mem[65] = 0xE0; mem[66] = 0x90; mem[67] = 0x90; mem[68] = 0x90; mem[69] = 0xE0;
+        mem[70] = 0xF0; mem[71] = 0x80; mem[72] = 0xF0; mem[73] = 0x80; mem[74] = 0xF0;
+        mem[75] = 0xF0; mem[76] = 0x80; mem[77] = 0xF0; mem[78] = 0x80; mem[79] = 0x80;
+
         mem[0x200..0x200 + instruction_section.len()].copy_from_slice(instruction_section);
 
         CHIP8 {
@@ -266,7 +283,15 @@ impl CHIP8 {
                 self.advance(2)
             }
             // Other
-            LDSPR(_) => Err(format!("{:?}", instr)),
+            LDSPR(x) => {
+                let val = self.current.reg[x as usize];
+                if val > 15 {
+                    Err(format!("LDSPR for {} > 15", val))
+                } else {
+                    self.current.idx = val as u16 * 5;
+                    self.advance(2)
+                }
+            },
             BCD(x) => {
                 let hundreds = self.current.reg[x as usize] / 100;
                 let tens = (self.current.reg[x as usize] % 100) / 10;
