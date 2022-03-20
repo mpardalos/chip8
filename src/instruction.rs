@@ -43,7 +43,7 @@ pub enum Instruction {
     /// Opcode: 8xyE
     SHL(Reg, Reg),
     /// Opcode: 9xy0
-    SKRNE(Reg, RegVal),
+    SKRNE(Reg, Reg),
     /// Opcode: Annn
     LOADI(Addr),
     /// Opcode: Bnnn
