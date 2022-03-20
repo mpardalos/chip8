@@ -32,7 +32,7 @@ impl Display for CHIP8 {
             .field("idx", &self.current.idx)
             .field("reg", &self.current.reg)
             .field(
-                "instruction",
+                "next_instruction",
                 &Instruction::from_bits(self.instruction_word_at(self.current.pc)),
             )
             .finish()?;
@@ -302,6 +302,8 @@ fn main() {
         let mut cpu = CHIP8::new(&instruction_mem);
         loop {
             println!("{}", cpu);
+            wait_for_enter();
+            clear_screen();
             match cpu.step() {
                 Ok(Continue::Stop) => {
                     println!("Done!");
@@ -315,4 +317,13 @@ fn main() {
             }
         }
     }
+}
+
+fn wait_for_enter() {
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+}
+
+fn clear_screen() {
+    print!("\x1B[2J\n");
 }
