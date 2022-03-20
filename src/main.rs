@@ -27,16 +27,20 @@ struct CHIP8 {
 
 impl Display for CHIP8 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CHIP8")
-            .field("pc", &self.current.pc)
-            .field("idx", &self.current.idx)
-            .field("reg", &self.current.reg)
-            .field("stack", &self.stack.len())
-            .field(
-                "next_instruction",
-                &Instruction::from_bits(self.instruction_word_at(self.current.pc)),
-            )
-            .finish()?;
+        let instr = match Instruction::try_from(self.instruction_word_at(self.pc)) {
+            Ok(i) => format!("{}", i),
+            Err(e) => e,
+        };
+
+        write!(
+            f,
+            "CHIP8 | pc: {:#X} | {:<20} | idx: {:>3X} | reg: {:?} | stack: {}",
+            self.pc,
+            instr,
+            self.idx,
+            self.reg,
+            self.stack.len()
+        )?;
         writeln!(
             f,
             "\n┌────────────────────────────────────────────────────────────────┐"

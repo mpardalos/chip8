@@ -76,6 +76,48 @@ pub enum Instruction {
     READ(Reg),
 }
 
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Instruction::*;
+        match self {
+            CLR           => write!(f, "CLR"),
+            RTS           => write!(f, "RTS"),
+            SYS(addr)     => write!(f, "SYS   {:#x}", addr),
+            JUMP(addr)    => write!(f, "JUMP  {:#x}", addr),
+            CALL(addr)    => write!(f, "CALL  {:#x}", addr),
+            LOADI(addr)   => write!(f, "LOADI {:#x}", addr),
+            JUMPI(addr)   => write!(f, "JUMPI {:#x}", addr),
+            SKE(x, n)     => write!(f, "SKE   v{:<2}, {:#x}", x, n),
+            SKNE(x, n)    => write!(f, "SKNE  v{:<2}, {:#x}", x, n),
+            LOAD(x, n)    => write!(f, "LOAD  v{:<2}, {:#x}", x, n),
+            ADD(x, n)     => write!(f, "ADD   v{:<2}, {:#x}", x, n),
+            RAND(x, n)    => write!(f, "RAND  v{:<2}, {:#x}", x, n),
+            SKRE(x, y)    => write!(f, "SKRE  v{:<2}, v{}", x, y),
+            MOVE(x, y)    => write!(f, "MOVE  v{:<2}, v{}", x, y),
+            OR(x, y)      => write!(f, "OR    v{:<2}, v{}", x, y),
+            AND(x, y)     => write!(f, "AND   v{:<2}, v{}", x, y),
+            XOR(x, y)     => write!(f, "XOR   v{:<2}, v{}", x, y),
+            ADDR(x, y)    => write!(f, "ADDR  v{:<2}, v{}", x, y),
+            SUB(x, y)     => write!(f, "SUB   v{:<2}, v{}", x, y),
+            SHR(x, y)     => write!(f, "SHR   v{:<2}, v{}", x, y),
+            SHL(x, y)     => write!(f, "SHL   v{:<2}, v{}", x, y),
+            SKRNE(x, y)   => write!(f, "SKRNE v{:<2}, v{}", x, y),
+            DRAW(x, y, n) => write!(f, "DRAW  v{:<2}, v{}, {:#x}", x, y, n),
+            SKPR(x)       => write!(f, "SKPR  v{:<2}", x),
+            SKUP(x)       => write!(f, "SKUP  v{:<2}", x),
+            MOVED(x)      => write!(f, "MOVED v{:<2}", x),
+            KEYD(x)       => write!(f, "KEYD  v{:<2}", x),
+            LOADD(x)      => write!(f, "LOADD v{:<2}", x),
+            LOADS(x)      => write!(f, "LOADS v{:<2}", x),
+            ADDI(x)       => write!(f, "ADDI  v{:<2}", x),
+            LDSPR(x)      => write!(f, "LDSPR v{:<2}", x),
+            BCD(x)        => write!(f, "BCD   v{:<2}", x),
+            STOR(x)       => write!(f, "STOR  v{:<2}", x),
+            READ(x)       => write!(f, "READ  v{:<2}", x),
+        }
+    }
+}
+
 fn addr(x: u16) -> Addr {
     x & 0x0FFF
 }
