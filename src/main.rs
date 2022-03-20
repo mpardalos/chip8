@@ -234,7 +234,7 @@ impl CHIP8 {
                     &self.mem[(self.current.idx as usize)..(self.current.idx + n as u16) as usize]
                 {
                     let mut x = self.current.reg[reg_x as usize];
-                    for bit in 0..7 {
+                    for bit in 0..8 {
                         let ref mut pixel = self.display[y as usize][x as usize];
                         if *pixel {
                             self.current.reg[0x0F] = 1
