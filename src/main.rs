@@ -116,9 +116,7 @@ impl CHIP8 {
         use crate::Continue::*;
         use Instruction::*;
 
-        let instr_bits = self.instruction_word_at(self.current.pc);
-        let instr = Instruction::from_bits(instr_bits)
-            .ok_or(format!("Unknown instruction {:#x}", instr_bits))?;
+        let instr = Instruction::try_from(self.instruction_word_at(self.pc))?;
 
         match instr {
             MOVE(x, y) => {
@@ -332,14 +330,14 @@ fn main() {
             .chunks_exact(2)
             .into_iter()
             .map(|a| u16::from_be_bytes([a[0], a[1]]))
-            .map(|x| (x, Instruction::from_bits(x)))
+            .map(|x| (x, Instruction::try_from(x)))
             .collect::<Vec<_>>();
 
         println!("---");
         println!("Instructions: ");
         let mut addr = 0x200;
         for (bits, m_instruction) in instructions {
-            if let Some(i) = m_instruction {
+            if let Ok(i) = m_instruction {
                 println!("{:#x}: {:x} - {:?}", addr, bits, i);
             } else {
                 println!("{:#x}: {:x} - ????", addr, bits);
