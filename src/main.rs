@@ -323,7 +323,6 @@ impl CHIP8 {
             DRAW(reg_x, reg_y, n) => {
                 let mut y = self.reg[reg_y as usize] as usize;
                 let x = self.reg[reg_x as usize] as usize;
-
                 let memidx = self.idx as usize;
 
                 self.reg[0x0F] = 0;
