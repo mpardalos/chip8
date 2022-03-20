@@ -10,17 +10,12 @@ use rand::prelude::*;
 
 use crate::instruction::Instruction;
 
-#[derive(Debug, Clone, Copy)]
-struct Stackframe {
-    reg: [u8; 16],
-    idx: u16,
-    pc: u16,
-}
-
 #[derive(Debug)]
 struct CHIP8 {
-    current: Stackframe,
-    stack: Vec<Stackframe>,
+    stack: Vec<u16>,
+    pc: u16,
+    reg: [u8; 16],
+    idx: u16,
     mem: Box<[u8; 4096]>,
     display: [[bool; 64]; 32],
 }
@@ -72,31 +67,93 @@ enum Continue {
 impl CHIP8 {
     fn new(instruction_section: &[u8]) -> CHIP8 {
         let mut mem = Box::new([0; 4096]);
-        mem[0] = 0xF0;  mem[1] = 0x90;  mem[2] = 0x90;  mem[3] = 0x90;  mem[4] = 0xF0;
-        mem[5] = 0x20;  mem[6] = 0x60;  mem[7] = 0x20;  mem[8] = 0x20;  mem[9] = 0x70;
-        mem[10] = 0xF0; mem[11] = 0x10; mem[12] = 0xF0; mem[13] = 0x80; mem[14] = 0xF0;
-        mem[15] = 0xF0; mem[16] = 0x10; mem[17] = 0xF0; mem[18] = 0x10; mem[19] = 0xF0;
-        mem[20] = 0x90; mem[21] = 0x90; mem[22] = 0xF0; mem[23] = 0x10; mem[24] = 0x10;
-        mem[25] = 0xF0; mem[26] = 0x80; mem[27] = 0xF0; mem[28] = 0x10; mem[29] = 0xF0;
-        mem[30] = 0xF0; mem[31] = 0x80; mem[32] = 0xF0; mem[33] = 0x90; mem[34] = 0xF0;
-        mem[35] = 0xF0; mem[36] = 0x10; mem[37] = 0x20; mem[38] = 0x40; mem[39] = 0x40;
-        mem[40] = 0xF0; mem[41] = 0x90; mem[42] = 0xF0; mem[43] = 0x90; mem[44] = 0xF0;
-        mem[45] = 0xF0; mem[46] = 0x90; mem[47] = 0xF0; mem[48] = 0x10; mem[49] = 0xF0;
-        mem[50] = 0xF0; mem[51] = 0x90; mem[52] = 0xF0; mem[53] = 0x90; mem[54] = 0x90;
-        mem[55] = 0xE0; mem[56] = 0x90; mem[57] = 0xE0; mem[58] = 0x90; mem[59] = 0xE0;
-        mem[60] = 0xF0; mem[61] = 0x80; mem[62] = 0x80; mem[63] = 0x80; mem[64] = 0xF0;
-        mem[65] = 0xE0; mem[66] = 0x90; mem[67] = 0x90; mem[68] = 0x90; mem[69] = 0xE0;
-        mem[70] = 0xF0; mem[71] = 0x80; mem[72] = 0xF0; mem[73] = 0x80; mem[74] = 0xF0;
-        mem[75] = 0xF0; mem[76] = 0x80; mem[77] = 0xF0; mem[78] = 0x80; mem[79] = 0x80;
+        mem[0] = 0xF0;
+        mem[1] = 0x90;
+        mem[2] = 0x90;
+        mem[3] = 0x90;
+        mem[4] = 0xF0;
+        mem[5] = 0x20;
+        mem[6] = 0x60;
+        mem[7] = 0x20;
+        mem[8] = 0x20;
+        mem[9] = 0x70;
+        mem[10] = 0xF0;
+        mem[11] = 0x10;
+        mem[12] = 0xF0;
+        mem[13] = 0x80;
+        mem[14] = 0xF0;
+        mem[15] = 0xF0;
+        mem[16] = 0x10;
+        mem[17] = 0xF0;
+        mem[18] = 0x10;
+        mem[19] = 0xF0;
+        mem[20] = 0x90;
+        mem[21] = 0x90;
+        mem[22] = 0xF0;
+        mem[23] = 0x10;
+        mem[24] = 0x10;
+        mem[25] = 0xF0;
+        mem[26] = 0x80;
+        mem[27] = 0xF0;
+        mem[28] = 0x10;
+        mem[29] = 0xF0;
+        mem[30] = 0xF0;
+        mem[31] = 0x80;
+        mem[32] = 0xF0;
+        mem[33] = 0x90;
+        mem[34] = 0xF0;
+        mem[35] = 0xF0;
+        mem[36] = 0x10;
+        mem[37] = 0x20;
+        mem[38] = 0x40;
+        mem[39] = 0x40;
+        mem[40] = 0xF0;
+        mem[41] = 0x90;
+        mem[42] = 0xF0;
+        mem[43] = 0x90;
+        mem[44] = 0xF0;
+        mem[45] = 0xF0;
+        mem[46] = 0x90;
+        mem[47] = 0xF0;
+        mem[48] = 0x10;
+        mem[49] = 0xF0;
+        mem[50] = 0xF0;
+        mem[51] = 0x90;
+        mem[52] = 0xF0;
+        mem[53] = 0x90;
+        mem[54] = 0x90;
+        mem[55] = 0xE0;
+        mem[56] = 0x90;
+        mem[57] = 0xE0;
+        mem[58] = 0x90;
+        mem[59] = 0xE0;
+        mem[60] = 0xF0;
+        mem[61] = 0x80;
+        mem[62] = 0x80;
+        mem[63] = 0x80;
+        mem[64] = 0xF0;
+        mem[65] = 0xE0;
+        mem[66] = 0x90;
+        mem[67] = 0x90;
+        mem[68] = 0x90;
+        mem[69] = 0xE0;
+        mem[70] = 0xF0;
+        mem[71] = 0x80;
+        mem[72] = 0xF0;
+        mem[73] = 0x80;
+        mem[74] = 0xF0;
+        mem[75] = 0xF0;
+        mem[76] = 0x80;
+        mem[77] = 0xF0;
+        mem[78] = 0x80;
+        mem[79] = 0x80;
 
         mem[0x200..0x200 + instruction_section.len()].copy_from_slice(instruction_section);
 
         CHIP8 {
-            current: Stackframe {
-                reg: [0; 16],
-                idx: 0,
-                pc: 0x200,
-            },
+            reg: [0; 16],
+            idx: 0,
+            pc: 0x200,
             stack: Vec::new(),
             mem,
             display: [[false; 64]; 32],
@@ -104,7 +161,7 @@ impl CHIP8 {
     }
 
     fn advance(&mut self, amount: u16) -> Result<Continue, String> {
-        self.current.pc += amount;
+        self.pc += amount;
         Ok(Continue::Continue)
     }
 
@@ -120,67 +177,65 @@ impl CHIP8 {
 
         match instr {
             MOVE(x, y) => {
-                self.current.reg[x as usize] = self.current.reg[y as usize];
+                self.reg[x as usize] = self.reg[y as usize];
                 self.advance(2)
             }
             OR(x, y) => {
-                self.current.reg[x as usize] |= self.current.reg[y as usize];
+                self.reg[x as usize] |= self.reg[y as usize];
                 self.advance(2)
             }
             AND(x, y) => {
-                self.current.reg[x as usize] &= self.current.reg[y as usize];
+                self.reg[x as usize] &= self.reg[y as usize];
                 self.advance(2)
             }
             XOR(x, y) => {
-                self.current.reg[x as usize] ^= self.current.reg[y as usize];
+                self.reg[x as usize] ^= self.reg[y as usize];
                 self.advance(2)
             }
             ADDR(x, y) => {
-                match self.current.reg[x as usize].checked_add(self.current.reg[y as usize]) {
+                match self.reg[x as usize].checked_add(self.reg[y as usize]) {
                     Some(val) => {
-                        self.current.reg[x as usize] = val;
-                        self.current.reg[0xf] = 0;
+                        self.reg[x as usize] = val;
+                        self.reg[0xf] = 0;
                     }
                     None => {
-                        self.current.reg[x as usize] = 0;
-                        self.current.reg[0xf] = 1;
+                        self.reg[x as usize] = 0;
+                        self.reg[0xf] = 1;
                     }
                 }
                 self.advance(2)
             }
             SUB(x, y) => {
-                self.current.reg[x as usize] -= self.current.reg[y as usize];
+                self.reg[x as usize] -= self.reg[y as usize];
                 self.advance(2)
             }
             SHR(x, y) => {
-                self.current.reg[0x0F] = self.current.reg[y as usize] & 1;
-                self.current.reg[y as usize] = self.current.reg[x as usize] >> 1;
+                self.reg[0x0F] = self.reg[y as usize] & 1;
+                self.reg[y as usize] = self.reg[x as usize] >> 1;
                 self.advance(2)
             }
             SHL(x, y) => {
-                self.current.reg[0x0F] = self.current.reg[y as usize] & 0xE0;
-                self.current.reg[y as usize] = self.current.reg[x as usize] << 1;
+                self.reg[0x0F] = self.reg[y as usize] & 0xE0;
+                self.reg[y as usize] = self.reg[x as usize] << 1;
                 self.advance(2)
             }
             LOAD(x, n) => {
-                self.current.reg[x as usize] = n;
+                self.reg[x as usize] = n;
                 self.advance(2)
             }
             ADD(x, n) => {
-                self.current.reg[x as usize] += n;
+                self.reg[x as usize] += n;
                 self.advance(2)
             }
             // Subroutines
             CALL(addr) => {
-                self.stack.push(self.current);
-                self.current.reg = [0; 16];
-                self.current.idx = 0;
-                self.current.pc = addr;
+                self.stack.push(self.pc);
+                self.pc = addr;
                 Ok(Continue)
             }
             RTS => {
-                if let Some(sf) = self.stack.pop() {
-                    self.current = sf;
+                if let Some(pc) = self.stack.pop() {
+                    self.pc = pc;
                     self.advance(2)
                 } else {
                     Err("Return from empty stack".to_string())
@@ -188,37 +243,37 @@ impl CHIP8 {
             }
             // Jumps
             JUMP(ofs) => {
-                self.current.pc = (self.current.pc & 0xF000) | (ofs & 0x0FFF);
+                self.pc = (self.pc & 0xF000) | (ofs & 0x0FFF);
                 Ok(Continue)
             }
             JUMPI(addr) => {
-                self.current.pc = addr + self.current.reg[0] as u16;
+                self.pc = addr + self.reg[0] as u16;
                 Ok(Continue)
             }
             // Skip
             SKE(x, n) => {
-                if self.current.reg[x as usize] == n {
+                if self.reg[x as usize] == n {
                     self.advance(4)
                 } else {
                     self.advance(2)
                 }
             }
             SKNE(x, n) => {
-                if self.current.reg[x as usize] != n {
+                if self.reg[x as usize] != n {
                     self.advance(4)
                 } else {
                     self.advance(2)
                 }
             }
             SKRE(x, y) => {
-                if self.current.reg[x as usize] != self.current.reg[y as usize] {
+                if self.reg[x as usize] != self.reg[y as usize] {
                     self.advance(4)
                 } else {
                     self.advance(2)
                 }
             }
             SKRNE(x, y) => {
-                if self.current.reg[x as usize] != self.current.reg[y as usize] {
+                if self.reg[x as usize] != self.reg[y as usize] {
                     self.advance(4)
                 } else {
                     self.advance(2)
@@ -227,50 +282,50 @@ impl CHIP8 {
             // Memory
             STOR(x) => {
                 for r in 0..=x {
-                    self.mem[self.current.idx as usize] = self.current.reg[r as usize];
-                    self.current.idx += 1;
+                    self.mem[self.idx as usize] = self.reg[r as usize];
+                    self.idx += 1;
                 }
 
                 self.advance(2)
             }
             READ(x) => {
                 for r in 0..=x {
-                    self.current.reg[r as usize] = self.mem[self.current.idx as usize];
-                    self.current.idx += 1;
+                    self.reg[r as usize] = self.mem[self.idx as usize];
+                    self.idx += 1;
                 }
 
                 self.advance(2)
-            },
+            }
             // Input
             SKPR(_) => Err(format!("{:?}", instr)),
             SKUP(_) => Err(format!("{:?}", instr)),
             // Delays
             MOVED(_) => Err(format!("{:?}", instr)),
-            KEYD(_)  => Err(format!("{:?}", instr)),
+            KEYD(_) => Err(format!("{:?}", instr)),
             LOADD(_) => Err(format!("{:?}", instr)),
             LOADS(_) => Err(format!("{:?}", instr)),
             // Index register
             ADDI(x) => {
-                self.current.idx += self.current.reg[x as usize] as u16;
+                self.idx += self.reg[x as usize] as u16;
                 self.advance(2)
             }
             LOADI(addr) => {
-                self.current.idx = addr;
+                self.idx = addr;
                 self.advance(2)
             }
             // Screen
             DRAW(reg_x, reg_y, n) => {
-                let mut y = self.current.reg[reg_y as usize];
+                let mut y = self.reg[reg_y as usize];
 
-                self.current.reg[0x0F] = 0;
+                self.reg[0x0F] = 0;
                 for byte in
-                    &self.mem[(self.current.idx as usize)..(self.current.idx + n as u16) as usize]
+                    &self.mem[(self.idx as usize)..(self.idx + n as u16) as usize]
                 {
-                    let mut x = self.current.reg[reg_x as usize];
+                    let mut x = self.reg[reg_x as usize];
                     for bit in 0..8 {
                         let ref mut pixel = self.display[y as usize][x as usize];
                         if *pixel {
-                            self.current.reg[0x0F] = 1
+                            self.reg[0x0F] = 1
                         }
                         *pixel = (byte & (0xE0 >> bit)) != 0;
                         x += 1;
@@ -286,28 +341,28 @@ impl CHIP8 {
             }
             // Other
             LDSPR(x) => {
-                let val = self.current.reg[x as usize];
+                let val = self.reg[x as usize];
                 if val > 15 {
                     Err(format!("LDSPR for {} > 15", val))
                 } else {
-                    self.current.idx = val as u16 * 5;
+                    self.idx = val as u16 * 5;
                     self.advance(2)
                 }
-            },
+            }
             BCD(x) => {
-                let hundreds = self.current.reg[x as usize] / 100;
-                let tens = (self.current.reg[x as usize] % 100) / 10;
-                let ones = self.current.reg[x as usize] % 10;
+                let hundreds = self.reg[x as usize] / 100;
+                let tens = (self.reg[x as usize] % 100) / 10;
+                let ones = self.reg[x as usize] % 10;
 
-                self.mem[self.current.idx as usize] = hundreds;
-                self.mem[self.current.idx as usize + 1] = tens;
-                self.mem[self.current.idx as usize + 2] = ones;
+                self.mem[self.idx as usize] = hundreds;
+                self.mem[self.idx as usize + 1] = tens;
+                self.mem[self.idx as usize + 2] = ones;
 
                 self.advance(2)
             }
             RAND(x, n) => {
                 let mut rng = rand::thread_rng();
-                self.current.reg[x as usize] = rng.gen_range(0..n);
+                self.reg[x as usize] = rng.gen_range(0..n);
                 self.advance(2)
             }
             SYS(0) => Ok(Stop),
