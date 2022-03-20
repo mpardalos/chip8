@@ -31,6 +31,7 @@ impl Display for CHIP8 {
             .field("pc", &self.current.pc)
             .field("idx", &self.current.idx)
             .field("reg", &self.current.reg)
+            .field("stack", &self.stack.len())
             .field(
                 "next_instruction",
                 &Instruction::from_bits(self.instruction_word_at(self.current.pc)),
