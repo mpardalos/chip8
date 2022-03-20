@@ -302,13 +302,15 @@ impl CHIP8 {
             // TODO: Implement input
             SKPR(_) => self.advance(2),
             SKUP(_) => self.advance(2),
-            // Delays
-            MOVED(_) => Err(format!("{:?}", instr)),
             KEYD(_) => Err(format!("{:?}", instr)),
-            LOADD(_) => Err(format!("{:?}", instr)),
 
+            // Sound
             // TODO: Implement sound
             LOADS(_) => self.advance(2),
+
+            // Delays
+            MOVED(_) => Err(format!("{:?}", instr)),
+            LOADD(_) => Err(format!("{:?}", instr)),
 
             // Index register
             ADDI(x) => {
