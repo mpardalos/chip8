@@ -253,7 +253,17 @@ impl CHIP8 {
             }
             // Other
             LDSPR(_) => Err("LDSPR".to_string()),
-            BCD(_) => Err("BCD".to_string()),
+            BCD(x) => {
+                let hundreds = self.current.reg[x as usize] / 100;
+                let tens = (self.current.reg[x as usize] % 100) / 10;
+                let ones = self.current.reg[x as usize] % 10;
+
+                self.mem[self.current.idx as usize] = hundreds;
+                self.mem[self.current.idx as usize + 1] = tens;
+                self.mem[self.current.idx as usize + 2] = ones;
+
+                self.advance(2)
+            }
             RAND(x, n) => {
                 let mut rng = rand::thread_rng();
                 self.current.reg[x as usize] = rng.gen_range(0..n);
