@@ -223,13 +223,13 @@ impl CHIP8 {
                 self.advance(2)
             },
             // Input
-            SKPR(_) => Err("Input".to_string()),
-            SKUP(_) => Err("Input".to_string()),
+            SKPR(_) => Err(format!("{:?}", instr)),
+            SKUP(_) => Err(format!("{:?}", instr)),
             // Delays
-            MOVED(_) => Err("Delays".to_string()),
-            KEYD(_) => Err("Delays".to_string()),
-            LOADD(_) => Err("Delays".to_string()),
-            LOADS(_) => Err("Delays".to_string()),
+            MOVED(_) => Err(format!("{:?}", instr)),
+            KEYD(_)  => Err(format!("{:?}", instr)),
+            LOADD(_) => Err(format!("{:?}", instr)),
+            LOADS(_) => Err(format!("{:?}", instr)),
             // Index register
             ADDI(x) => {
                 self.current.idx += self.current.reg[x as usize] as u16;
@@ -266,7 +266,7 @@ impl CHIP8 {
                 self.advance(2)
             }
             // Other
-            LDSPR(_) => Err("LDSPR".to_string()),
+            LDSPR(_) => Err(format!("{:?}", instr)),
             BCD(x) => {
                 let hundreds = self.current.reg[x as usize] / 100;
                 let tens = (self.current.reg[x as usize] % 100) / 10;
