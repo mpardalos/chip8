@@ -17,6 +17,7 @@ struct CHIP8 {
     pc: u16,
 
     mem: Box<[u8; 4096]>,
+    display: [[bool; 64]; 32],
 }
 
 impl Display for CHIP8 {
@@ -29,7 +30,27 @@ impl Display for CHIP8 {
                 "instruction",
                 &Instruction::from_bits(self.instruction_word_at(self.pc)),
             )
-            .finish()
+            .finish()?;
+        writeln!(
+            f,
+            "\n+----------------------------------------------------------------+"
+        )?;
+        for row in self.display {
+            write!(f, "|")?;
+            for pixel in row {
+                if pixel {
+                    write!(f, "X")?;
+                } else {
+                    write!(f, " ")?;
+                }
+            }
+            write!(f, "|\n")?;
+        }
+        writeln!(
+            f,
+            "+----------------------------------------------------------------+"
+        )?;
+        Ok(())
     }
 }
 
@@ -48,6 +69,7 @@ impl CHIP8 {
             idx: 0,
             pc: 0x200,
             mem,
+            display: [[false; 64]; 32],
         }
     }
 
@@ -182,8 +204,29 @@ impl CHIP8 {
                 self.advance(2)
             }
             // Screen
-            DRAW(_, _, _) => Err("Screen".to_string()),
-            CLR => Err("Screen".to_string()),
+            DRAW(reg_x, reg_y, n) => {
+                let mut y = self.reg[reg_y as usize];
+
+                self.reg[0x0F] = 0;
+                for byte in &self.mem[(self.idx as usize)..(self.idx + n as u16) as usize] {
+                    let mut x = self.reg[reg_x as usize];
+                    for bit in 0..7 {
+                        let ref mut pixel = self.display[y as usize][x as usize];
+                        if *pixel {
+                            self.reg[0x0F] = 1
+                        }
+                        *pixel = (byte & (0xE0 >> bit)) != 0;
+                        x += 1;
+                    }
+                    y += 1;
+                }
+
+                self.advance(2)
+            }
+            CLR => {
+                self.display = [[false; 64]; 32];
+                self.advance(2)
+            }
             // Other
             LDSPR(_) => Err("LDSPR".to_string()),
             BCD(_) => Err("BCD".to_string()),
