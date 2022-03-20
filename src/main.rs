@@ -4,7 +4,7 @@ use std::{
     cmp::min,
     env::args,
     fmt::{self, Display},
-    fs,
+    fs, thread::sleep, time::Duration,
 };
 
 use bitvec::prelude::*;
@@ -412,7 +412,8 @@ fn main() {
         let mut cpu = CHIP8::new(&instruction_mem);
         loop {
             println!("{}", cpu);
-            wait_for_enter();
+            // wait_for_enter();
+            sleep(Duration::from_millis(5));
             clear_screen();
             match cpu.step() {
                 Ok(Continue::Stop) => {
