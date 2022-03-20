@@ -206,8 +206,22 @@ impl CHIP8 {
                 }
             }
             // Memory
-            STOR(_) => Err("Memory".to_string()),
-            READ(_) => Err("Memory".to_string()),
+            STOR(x) => {
+                for r in 0..=x {
+                    self.mem[self.current.idx as usize] = self.current.reg[r as usize];
+                    self.current.idx += 1;
+                }
+
+                self.advance(2)
+            }
+            READ(x) => {
+                for r in 0..=x {
+                    self.current.reg[r as usize] = self.mem[self.current.idx as usize];
+                    self.current.idx += 1;
+                }
+
+                self.advance(2)
+            },
             // Input
             SKPR(_) => Err("Input".to_string()),
             SKUP(_) => Err("Input".to_string()),
