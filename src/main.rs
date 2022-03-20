@@ -1,11 +1,13 @@
 mod instruction;
 
 use std::{
+    cmp::min,
     env::args,
     fmt::{self, Display},
     fs,
 };
 
+use bitvec::prelude::*;
 use rand::prelude::*;
 
 use crate::instruction::Instruction;
@@ -17,7 +19,7 @@ struct CHIP8 {
     reg: [u8; 16],
     idx: u16,
     mem: Box<[u8; 4096]>,
-    display: [[bool; 64]; 32],
+    display: [BitArray<[u64; 1], Msb0>; 32],
 }
 
 impl Display for CHIP8 {
@@ -156,7 +158,7 @@ impl CHIP8 {
             pc: 0x200,
             stack: Vec::new(),
             mem,
-            display: [[false; 64]; 32],
+            display: [bitarr![u64, Msb0; 0; 64]; 32],
         }
     }
 
@@ -315,28 +317,26 @@ impl CHIP8 {
             }
             // Screen
             DRAW(reg_x, reg_y, n) => {
-                let mut y = self.reg[reg_y as usize];
+                let mut y = self.reg[reg_y as usize] as usize;
+                let x = self.reg[reg_x as usize] as usize;
+
+                let memidx = self.idx as usize;
 
                 self.reg[0x0F] = 0;
-                for byte in
-                    &self.mem[(self.idx as usize)..(self.idx + n as u16) as usize]
-                {
-                    let mut x = self.reg[reg_x as usize];
-                    for bit in 0..8 {
-                        let ref mut pixel = self.display[y as usize][x as usize];
-                        if *pixel {
-                            self.reg[0x0F] = 1
-                        }
-                        *pixel = (byte & (0xE0 >> bit)) != 0;
-                        x += 1;
+                for byte in &self.mem[memidx..memidx + n as usize] {
+                    if *byte != 0 {
+                        self.reg[0x0F] = 1;
                     }
+
+                    self.display[y][x..min(x + 8, 64)].store_be(*byte);
+
                     y += 1;
                 }
 
                 self.advance(2)
             }
             CLR => {
-                self.display = [[false; 64]; 32];
+                self.display = [bitarr![u64, Msb0; 0; 64]; 32];
                 self.advance(2)
             }
             // Other
