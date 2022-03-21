@@ -14,8 +14,18 @@ struct Args {
     #[clap(short, long)]
     term: bool,
 
+    /// Dump instructions loaded from rom file at the start
+    #[clap(long)]
+    dump_code: bool,
+
     /// Path to the rom file to load
     rom: String,
+}
+
+impl Args {
+    fn should_run(&self) -> bool {
+        !self.dump_code
+    }
 }
 
 fn main() {
@@ -25,9 +35,9 @@ fn main() {
     }
 
     println!("Reading file {}", args.rom);
-    let instruction_mem: Vec<u8> = fs::read(args.rom).expect("open input file");
+    let instruction_mem: Vec<u8> = fs::read(&args.rom).expect("open input file");
 
-    if false {
+    if args.dump_code {
         let instructions = instruction_mem
             .chunks_exact(2)
             .into_iter()
@@ -40,7 +50,7 @@ fn main() {
         let mut addr = 0x200;
         for (bits, m_instruction) in instructions {
             if let Ok(i) = m_instruction {
-                println!("{:#x}: {:x} - {:?}", addr, bits, i);
+                println!("{:#x}: {:x} - {}", addr, bits, i);
             } else {
                 println!("{:#x}: {:x} - ????", addr, bits);
             }
@@ -49,7 +59,7 @@ fn main() {
         }
     }
 
-    {
+    if args.should_run() {
         println!("---");
         println!("CPU");
 
