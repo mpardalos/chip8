@@ -13,21 +13,15 @@ use crate::instruction::Instruction;
 #[derive(Parser, Debug)]
 struct Args {
     /// Use terminal rendering
-    #[clap(short, long)]
+    #[clap(short, long, group = "goal")]
     term: bool,
 
     /// Dump instructions loaded from rom file at the start
-    #[clap(long)]
+    #[clap(long, group = "goal")]
     dump_code: bool,
 
     /// Path to the rom file to load
     rom: String,
-}
-
-impl Args {
-    fn should_run(&self) -> bool {
-        !self.dump_code
-    }
 }
 
 fn main() {
@@ -44,8 +38,7 @@ fn main() {
             .map(|x| (x, Instruction::try_from(x)))
             .collect::<Vec<_>>();
 
-        println!("---");
-        println!("Instructions: ");
+        println!("Initial RAM: ");
         let mut addr = 0x200;
         for (bits, m_instruction) in instructions {
             if let Ok(i) = m_instruction {
