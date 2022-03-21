@@ -18,9 +18,13 @@ pub struct CHIP8 {
     display: [BitArray<[u64; 1], Msb0>; 32],
 }
 
-pub enum Continue {
-    Continue,
-    Stop,
+/// Outcome of one step of execution
+pub enum StepResult {
+    /// Program continues. Bool specifies whether the display was updated
+    Continue(bool),
+
+    /// Program ends.
+    End,
 }
 
 impl Display for CHIP8 {
@@ -158,16 +162,16 @@ impl CHIP8 {
         }
     }
 
-    fn advance(&mut self, amount: u16) -> Result<Continue, String> {
+    fn advance(&mut self, amount: u16) -> Result<StepResult, String> {
         self.pc += amount;
-        Ok(Continue::Continue)
+        Ok(StepResult::Continue(false))
     }
 
     fn instruction_word_at(&self, addr: u16) -> u16 {
         u16::from_be_bytes([self.mem[addr as usize], self.mem[addr as usize + 1]])
     }
 
-    pub fn step(&mut self) -> Result<Continue, String> {
+    pub fn step(&mut self) -> Result<StepResult, String> {
         use Instruction::*;
 
         let instr = Instruction::try_from(self.instruction_word_at(self.pc))?;
@@ -229,7 +233,7 @@ impl CHIP8 {
             CALL(addr) => {
                 self.stack.push(self.pc);
                 self.pc = addr;
-                Ok(Continue::Continue)
+                Ok(StepResult::Continue(false))
             }
             RTS => {
                 if let Some(pc) = self.stack.pop() {
@@ -242,11 +246,11 @@ impl CHIP8 {
             // Jumps
             JUMP(ofs) => {
                 self.pc = (self.pc & 0xF000) | (ofs & 0x0FFF);
-                Ok(Continue::Continue)
+                Ok(StepResult::Continue(false))
             }
             JUMPI(addr) => {
                 self.pc = addr + self.reg[0] as u16;
-                Ok(Continue::Continue)
+                Ok(StepResult::Continue(false))
             }
             // Skip
             SKE(x, n) => {
@@ -334,7 +338,8 @@ impl CHIP8 {
                     y += 1;
                 }
 
-                self.advance(2)
+                self.advance(2);
+                Ok(StepResult::Continue(true))
             }
             CLR => {
                 self.display = [bitarr![u64, Msb0; 0; 64]; 32];
@@ -366,7 +371,7 @@ impl CHIP8 {
                 self.reg[x as usize] = rng.gen_range(0..n);
                 self.advance(2)
             }
-            SYS(0) => Ok(Continue::Stop),
+            SYS(0) => Ok(StepResult::End),
             SYS(_) => Err("SYS".to_string()),
         }
     }
