@@ -17,25 +17,28 @@ const WINDOW_WIDTH: u32 = 960;
 const WINDOW_HEIGHT: u32 = 540;
 const WINDOW_FPS: u32 = 60;
 
-pub fn run_window(mut cpu: CHIP8) {
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
-    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string()).unwrap();
-    let window = video_subsystem
+pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
+    let sdl_context = sdl2::init().map_err(|e| e.to_string())?;
+    let mut canvas: Canvas<Window> = sdl_context
+        .video()
+        .map_err(|e| e.to_string())?
         .window(WINDOW_NAME, WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered()
         .build()
-        .unwrap();
-    let mut canvas: Canvas<Window> = window.into_canvas().build().unwrap();
+        .map_err(|e| e.to_string())?
+        .into_canvas()
+        .build()
+        .map_err(|e| e.to_string())?;
+    let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
 
     // Load a font
+    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let mut font = ttf_context
         .load_font("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf", 18)
         .unwrap();
     font.set_style(sdl2::ttf::FontStyle::BOLD);
 
     let mut target_fps = WINDOW_FPS;
-    let mut event_pump = sdl_context.event_pump().unwrap();
     let mut frame_time_counter = Instant::now();
 
     'running: loop {
@@ -72,6 +75,8 @@ pub fn run_window(mut cpu: CHIP8) {
         .unwrap();
         canvas.present();
     }
+
+    Ok(())
 }
 
 enum TextBackground {
