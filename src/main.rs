@@ -4,11 +4,14 @@ use std::{
     cmp::min,
     env::args,
     fmt::{self, Display},
-    fs, thread::sleep, time::Duration,
+    fs,
+    thread::sleep,
+    time::Duration,
 };
 
 use bitvec::prelude::*;
 use rand::prelude::*;
+use clap::{Parser, ArgEnum};
 
 use crate::instruction::Instruction;
 
@@ -201,7 +204,8 @@ impl CHIP8 {
                         self.reg[0xf] = 0;
                     }
                     None => {
-                        self.reg[x as usize] = self.reg[x as usize].wrapping_add(self.reg[y as usize]);
+                        self.reg[x as usize] =
+                            self.reg[x as usize].wrapping_add(self.reg[y as usize]);
                         self.reg[0xf] = 1;
                     }
                 }
@@ -376,14 +380,24 @@ impl CHIP8 {
     }
 }
 
+#[derive(Parser, Debug )]
+struct Args {
+    /// Use terminal rendering
+    #[clap(short, long)]
+    term: bool,
+
+    /// Path to the rom file to load
+    rom: String,
+}
+
 fn main() {
-    let args: Vec<String> = args().collect();
-    assert_eq!(args.len(), 2);
-    let filename = &args[1];
+    let args = Args::parse();
+    if args.term {
+        panic!("GUI not implemented")
+    }
 
-    println!("Reading file {}", filename);
-
-    let instruction_mem: Vec<u8> = fs::read(filename).expect("open input file");
+    println!("Reading file {}", args.rom);
+    let instruction_mem: Vec<u8> = fs::read(args.rom).expect("open input file");
 
     if false {
         let instructions = instruction_mem
