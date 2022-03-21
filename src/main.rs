@@ -1,11 +1,13 @@
 mod cpu;
+mod display;
 mod instruction;
 
 use std::{fs, thread::sleep, time::Duration};
 
 use clap::Parser;
 
-use crate::cpu::{CHIP8, Continue};
+use crate::cpu::{Continue, CHIP8};
+use crate::display::run_window;
 use crate::instruction::Instruction;
 
 #[derive(Parser, Debug)]
@@ -30,9 +32,6 @@ impl Args {
 
 fn main() {
     let args = Args::parse();
-    if args.term {
-        panic!("GUI not implemented")
-    }
 
     println!("Reading file {}", args.rom);
     let instruction_mem: Vec<u8> = fs::read(&args.rom).expect("open input file");
@@ -59,10 +58,7 @@ fn main() {
         }
     }
 
-    if args.should_run() {
-        println!("---");
-        println!("CPU");
-
+    if args.term {
         let mut cpu = CHIP8::new(&instruction_mem);
         loop {
             println!("{}", cpu);
@@ -81,6 +77,8 @@ fn main() {
                 }
             }
         }
+    } else {
+        run_window(CHIP8::new(&instruction_mem));
     }
 }
 
