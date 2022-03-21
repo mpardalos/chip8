@@ -40,24 +40,18 @@ pub fn run_window(mut cpu: CHIP8) {
 
     'running: loop {
         for event in event_pump.poll_iter() {
+            use Keycode::*;
             match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape | Keycode::Q),
-                    ..
-                } => break 'running,
+                Event::Quit { .. } => break 'running,
                 Event::KeyDown {
-                    keycode: Some(Keycode::R),
+                    keycode: Some(keycode),
                     ..
-                } => { /* reset */ }
-                Event::KeyDown {
-                    keycode: Some(Keycode::O),
-                    ..
-                } => target_fps = target_fps.saturating_sub(1),
-                Event::KeyDown {
-                    keycode: Some(Keycode::P),
-                    ..
-                } => target_fps = target_fps.saturating_add(1),
+                } => match keycode {
+                    Q | Escape => break 'running,
+                    O => target_fps = target_fps.saturating_sub(1),
+                    P => target_fps = target_fps.saturating_add(1),
+                    _ => {}
+                },
                 _ => {}
             }
         }
