@@ -1,4 +1,7 @@
-use std::fmt::{self, Display};
+use std::{
+    fmt::{self, Display},
+    time,
+};
 
 use rand::prelude::*;
 
@@ -14,6 +17,7 @@ pub struct CHIP8 {
     pub reg: [u8; 16],
     pub idx: u16,
     pub delay: u8,
+    tick: time::Instant,
     pub mem: Box<[u8; 4096]>,
     pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],
 }
@@ -158,6 +162,7 @@ impl CHIP8 {
             pc: 0x200,
             stack: Vec::new(),
             delay: 0,
+            tick: time::Instant::now(),
             mem,
             display: [[false; 64]; 32],
         }
@@ -178,7 +183,10 @@ impl CHIP8 {
     pub fn step(&mut self, keystate: &[bool; 16]) -> Result<StepResult, String> {
         use Instruction::*;
 
-        self.delay = self.delay.saturating_sub(1);
+        if time::Instant::now() - self.tick > time::Duration::from_millis(016) {
+            self.delay = self.delay.saturating_sub(1);
+            self.tick = time::Instant::now();
+        }
 
         match self.current_instruction()? {
             MOVE(x, y) => {
@@ -364,11 +372,11 @@ impl CHIP8 {
                     let mut col = self.reg[x as usize] as usize;
                     for bitidx in 0..8 {
                         let bit = (byte & (1 << (7 - bitidx))) != 0;
-                        if self.display[row][col % DISPLAY_COLS] & bit {
+                        if self.display[row % DISPLAY_ROWS][col % DISPLAY_COLS] & bit {
                             self.reg[0x0F] = 1;
                         }
 
-                        self.display[row][col % DISPLAY_COLS] ^= bit;
+                        self.display[row % DISPLAY_ROWS][col % DISPLAY_COLS] ^= bit;
                         col += 1;
                     }
 
