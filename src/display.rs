@@ -1,8 +1,11 @@
-use std::time::{Duration, Instant};
+use std::{
+    cmp::min,
+    time::{Duration, Instant},
+};
 
 use sdl2::{
     event::Event,
-    keyboard::Keycode,
+    keyboard::{Keycode, Scancode},
     pixels::Color,
     rect::Rect,
     render::{Canvas, TextureQuery, WindowCanvas},
@@ -16,6 +19,7 @@ const WINDOW_NAME: &str = "CHIP8";
 const WINDOW_WIDTH: u32 = 960;
 const WINDOW_HEIGHT: u32 = 540;
 const WINDOW_FPS: u32 = 60;
+const TARGET_STEP_TIME: Duration = Duration::from_nanos(016666666);
 
 pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
     let sdl_context = sdl2::init().map_err(|e| e.to_string())?;
@@ -38,28 +42,15 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
         .unwrap();
     font.set_style(sdl2::ttf::FontStyle::BOLD);
 
-    let mut target_fps = WINDOW_FPS;
-    let mut frame_time_counter = Instant::now();
-
     'running: loop {
+        let tick_start = Instant::now();
         for event in event_pump.poll_iter() {
-            use Keycode::*;
             match event {
                 Event::Quit { .. } => break 'running,
-                Event::KeyDown {
-                    keycode: Some(keycode),
-                    ..
-                } => match keycode {
-                    Q | Escape => break 'running,
-                    O => target_fps = target_fps.saturating_sub(1),
-                    P => target_fps = target_fps.saturating_add(1),
-                    _ => {}
-                },
                 _ => {}
             }
         }
 
-        std::thread::sleep(Duration::new(0, 1_000_000_000u32 / target_fps));
 
         let keystate = [false; 16];
         match cpu.step(&keystate)? {
@@ -86,23 +77,23 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
                     }
                     y += pixel_height;
                 }
-
-                // Frame timing
-                let now = Instant::now();
-                let frametime = now - frame_time_counter;
-                frame_time_counter = now;
-                show_text(
-                    &mut canvas,
-                    &font,
-                    TextBackground::Solid(Color::BLACK),
-                    0,
-                    0,
-                    &format!("{:.0}", 1. / frametime.as_secs_f32()),
-                )
-                .unwrap();
-                canvas.present();
             }
         }
+
+        // Frame timing
+        let tick_end = Instant::now();
+        let elapsed = tick_end - tick_start;
+        std::thread::sleep(TARGET_STEP_TIME - min(TARGET_STEP_TIME, elapsed));
+        let frame_time = Instant::now() - tick_start;
+        show_text(
+            &mut canvas,
+            &font,
+            TextBackground::Solid(Color::BLACK),
+            0,
+            0,
+            &format!("{:.0}   ", 1. / frame_time.as_secs_f32()),
+        )?;
+        canvas.present();
     }
 
     Ok(())
