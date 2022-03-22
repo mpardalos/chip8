@@ -8,6 +8,9 @@ use rand::prelude::*;
 
 use crate::instruction::Instruction;
 
+pub const DISPLAY_ROWS: usize = 32;
+pub const DISPLAY_COLS: usize = 64;
+
 #[derive(Debug)]
 pub struct CHIP8 {
     stack: Vec<u16>,
