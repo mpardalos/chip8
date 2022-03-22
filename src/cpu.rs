@@ -334,6 +334,7 @@ impl CHIP8 {
                     if pressed {
                         self.reg[x as usize] = key as u8;
                         let _ = self.advance(2);
+                        break;
                     }
                 }
                 Ok(StepResult::Continue(false))
