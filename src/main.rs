@@ -9,7 +9,7 @@ use std::{fs, time::Duration};
 
 use clap::Parser;
 
-use crate::cpu::{StepResult, CHIP8};
+use crate::cpu::{StepResult, CHIP8, CHIP8IO};
 use crate::display::run_gui;
 use crate::instruction::Instruction;
 
@@ -76,19 +76,20 @@ fn main() {
             addr += 2;
         }
     } else {
-        let cpu = Arc::new(Mutex::new(CHIP8::new(&instruction_mem)));
-        let core_cpu = cpu.clone();
+        let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
+        let gui_io = cpu_io.clone();
 
         let _cpu_thread = thread::spawn(move || {
+            let mut cpu = CHIP8::new(&instruction_mem);
             let mut ticker = Instant::now();
             loop {
-                if core_cpu.lock().unwrap().step().unwrap() == StepResult::End {
+                if cpu.step(&cpu_io).unwrap() == StepResult::End {
                     break;
                 };
                 rate_limit(args.ips, &mut ticker);
             }
         });
 
-        run_gui(args.fps, &cpu).unwrap();
+        run_gui(args.fps, &gui_io).unwrap();
     }
 }

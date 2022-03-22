@@ -1,5 +1,6 @@
 use std::{
     fmt::{self, Display},
+    sync::Mutex,
     time,
 };
 
@@ -10,6 +11,20 @@ use crate::instruction::Instruction;
 pub const DISPLAY_ROWS: usize = 32;
 pub const DISPLAY_COLS: usize = 64;
 
+pub struct CHIP8IO {
+    pub keystate: [bool; 16],
+    pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],
+}
+
+impl CHIP8IO {
+    pub fn new() -> CHIP8IO {
+        CHIP8IO {
+            keystate: [false; 16],
+            display: [[false; DISPLAY_COLS]; DISPLAY_ROWS],
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct CHIP8 {
     pub stack: Vec<u16>,
@@ -17,10 +32,8 @@ pub struct CHIP8 {
     pub reg: [u8; 16],
     pub idx: u16,
     pub delay: u8,
-    pub keystate: [bool; 16],
     tick: time::Instant,
     pub mem: Box<[u8; 4096]>,
-    pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],
 }
 
 /// Outcome of one step of execution
@@ -33,22 +46,8 @@ pub enum StepResult {
     End,
 }
 
-impl Display for CHIP8 {
+impl Display for CHIP8IO {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let instr = match self.current_instruction() {
-            Ok(i) => format!("{}", i),
-            Err(e) => e,
-        };
-
-        write!(
-            f,
-            "CHIP8 | pc: {:#X} | {:<20} | idx: {:>3X} | reg: {:?} | stack: {}",
-            self.pc,
-            instr,
-            self.idx,
-            self.reg,
-            self.stack.len()
-        )?;
         writeln!(
             f,
             "\n┌────────────────────────────────────────────────────────────────┐"
@@ -67,6 +66,26 @@ impl Display for CHIP8 {
         writeln!(
             f,
             "└────────────────────────────────────────────────────────────────┘"
+        )?;
+        Ok(())
+    }
+}
+
+impl Display for CHIP8 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let instr = match self.current_instruction() {
+            Ok(i) => format!("{}", i),
+            Err(e) => e,
+        };
+
+        write!(
+            f,
+            "CHIP8 | pc: {:#X} | {:<20} | idx: {:>3X} | reg: {:?} | stack: {}",
+            self.pc,
+            instr,
+            self.idx,
+            self.reg,
+            self.stack.len()
         )?;
         Ok(())
     }
@@ -166,8 +185,6 @@ impl CHIP8 {
             delay: 0,
             tick: time::Instant::now(),
             mem,
-            display: [[false; 64]; 32],
-            keystate: [false; 16],
         }
     }
 
@@ -183,7 +200,7 @@ impl CHIP8 {
         ]))
     }
 
-    pub fn step(&mut self) -> Result<StepResult, String> {
+    pub fn step(&mut self, io: &Mutex<CHIP8IO>) -> Result<StepResult, String> {
         use Instruction::*;
 
         if time::Instant::now() - self.tick > time::Duration::from_millis(016) {
@@ -316,7 +333,7 @@ impl CHIP8 {
             // Input
             SKPR(x) => {
                 let keyidx: usize = self.reg[x as usize] as usize;
-                let pressed = *self.keystate.get(keyidx).unwrap_or(&false);
+                let pressed = *io.lock().unwrap().keystate.get(keyidx).unwrap_or(&false);
                 if pressed {
                     self.advance(4)
                 } else {
@@ -325,7 +342,7 @@ impl CHIP8 {
             }
             SKUP(x) => {
                 let keyidx: usize = self.reg[x as usize] as usize;
-                let pressed = *self.keystate.get(keyidx).unwrap_or(&false);
+                let pressed = *io.lock().unwrap().keystate.get(keyidx).unwrap_or(&false);
                 if pressed {
                     self.advance(4)
                 } else {
@@ -333,7 +350,7 @@ impl CHIP8 {
                 }
             }
             KEYD(x) => {
-                for (key, &pressed) in self.keystate.iter().enumerate() {
+                for (key, &pressed) in io.lock().unwrap().keystate.iter().enumerate() {
                     if pressed {
                         self.reg[x as usize] = key as u8;
                         let _ = self.advance(2);
@@ -368,6 +385,7 @@ impl CHIP8 {
             }
             // Screen
             DRAW(x, y, n) => {
+                let display = &mut io.lock().unwrap().display;
                 let mut row = self.reg[y as usize] as usize;
                 let memidx = self.idx as usize;
 
@@ -376,11 +394,11 @@ impl CHIP8 {
                     let mut col = self.reg[x as usize] as usize;
                     for bitidx in 0..8 {
                         let bit = (byte & (1 << (7 - bitidx))) != 0;
-                        if self.display[row % DISPLAY_ROWS][col % DISPLAY_COLS] & bit {
+                        if display[row % DISPLAY_ROWS][col % DISPLAY_COLS] & bit {
                             self.reg[0x0F] = 1;
                         }
 
-                        self.display[row % DISPLAY_ROWS][col % DISPLAY_COLS] ^= bit;
+                        display[row % DISPLAY_ROWS][col % DISPLAY_COLS] ^= bit;
                         col += 1;
                     }
 
@@ -391,7 +409,7 @@ impl CHIP8 {
                 Ok(StepResult::Continue(true))
             }
             CLR => {
-                self.display = [[false; 64]; 32];
+                io.lock().unwrap().display = [[false; 64]; 32];
                 self.advance(2)
             }
             // Other

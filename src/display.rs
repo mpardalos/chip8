@@ -10,8 +10,9 @@ use sdl2::{
     video::Window,
 };
 
+use crate::cpu::CHIP8IO;
 use crate::{
-    cpu::{CHIP8, DISPLAY_COLS, DISPLAY_ROWS},
+    cpu::{DISPLAY_COLS, DISPLAY_ROWS},
     rate_limit,
 };
 
@@ -19,7 +20,7 @@ const WINDOW_NAME: &str = "CHIP8";
 const DISPLAY_WIDTH: u32 = 960;
 const DISPLAY_HEIGHT: u32 = 540;
 
-pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>) -> Result<(), String> {
+pub fn run_gui(fps: u64, io: &Mutex<CHIP8IO>) -> Result<(), String> {
     // Load a font
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let mut font = ttf_context
@@ -55,7 +56,7 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>) -> Result<(), String> {
 
         // Take input
         let keyboard_state = event_pump.keyboard_state();
-        cpu.lock().unwrap().keystate = [
+        io.lock().unwrap().keystate = [
             keyboard_state.is_scancode_pressed(Scancode::Num1),
             keyboard_state.is_scancode_pressed(Scancode::Num2),
             keyboard_state.is_scancode_pressed(Scancode::Num3),
@@ -80,7 +81,7 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>) -> Result<(), String> {
         let pixel_width: u32 = win_width / DISPLAY_COLS as u32;
         let pixel_height: u32 = win_height / DISPLAY_ROWS as u32;
         let mut y: u32 = 0;
-        for row in cpu.lock().unwrap().display {
+        for row in io.lock().unwrap().display {
             let mut x: u32 = 0;
             for pixel in row {
                 canvas.set_draw_color(if pixel { Color::BLUE } else { Color::BLACK });
@@ -89,15 +90,6 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>) -> Result<(), String> {
             }
             y += pixel_height;
         }
-
-        show_text(
-            &mut canvas,
-            &font,
-            TextBackground::Solid(Color::BLACK),
-            0,
-            DISPLAY_HEIGHT as i32,
-            &format!("{}            ", cpu.lock().unwrap().current_instruction()?),
-        )?;
 
         // Frame timing
         let (_, frame_time) = rate_limit(fps, &mut ticker);
