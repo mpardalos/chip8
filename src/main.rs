@@ -72,7 +72,7 @@ fn main() {
             }
         }
     } else {
-        run_window(CHIP8::new(&instruction_mem));
+        run_window(CHIP8::new(&instruction_mem)).expect("run GUI");
     }
 }
 
