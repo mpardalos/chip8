@@ -173,7 +173,10 @@ impl CHIP8 {
     }
 
     pub fn current_instruction(&self) -> Result<Instruction, String> {
-        Instruction::try_from(u16::from_be_bytes([self.mem[self.pc as usize], self.mem[self.pc as usize + 1]]))
+        Instruction::try_from(u16::from_be_bytes([
+            self.mem[self.pc as usize],
+            self.mem[self.pc as usize + 1],
+        ]))
     }
 
     pub fn step(&mut self, keystate: &[bool; 16]) -> Result<StepResult, String> {
