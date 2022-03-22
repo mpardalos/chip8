@@ -32,7 +32,11 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
     let mut canvas: Canvas<Window> = sdl_context
         .video()
         .map_err(|e| e.to_string())?
-        .window(WINDOW_NAME, DISPLAY_WIDTH, DISPLAY_HEIGHT + font.height() as u32)
+        .window(
+            WINDOW_NAME,
+            DISPLAY_WIDTH,
+            DISPLAY_HEIGHT + font.height() as u32,
+        )
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?
@@ -93,33 +97,33 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
                     }
                     y += pixel_height;
                 }
+
+                let instr = cpu.current_instruction()?;
+                show_text(
+                    &mut canvas,
+                    &font,
+                    TextBackground::Solid(Color::BLACK),
+                    0,
+                    DISPLAY_HEIGHT as i32,
+                    &format!("{}            ", instr),
+                )?;
+
+                // Frame timing
+                let tick_end = Instant::now();
+                let elapsed = tick_end - tick_start;
+                std::thread::sleep(TARGET_STEP_TIME - min(TARGET_STEP_TIME, elapsed));
+                let frame_time = Instant::now() - tick_start;
+                show_text(
+                    &mut canvas,
+                    &font,
+                    TextBackground::Solid(Color::BLACK),
+                    0,
+                    0,
+                    &format!("{:.0}   ", 1. / frame_time.as_secs_f32()),
+                )?;
+                canvas.present();
             }
         }
-
-        let instr = cpu.current_instruction()?;
-        show_text(
-            &mut canvas,
-            &font,
-            TextBackground::Solid(Color::BLACK),
-            0,
-            DISPLAY_HEIGHT as i32,
-            &format!("{}            ", instr),
-        )?;
-
-        // Frame timing
-        let tick_end = Instant::now();
-        let elapsed = tick_end - tick_start;
-        std::thread::sleep(TARGET_STEP_TIME - min(TARGET_STEP_TIME, elapsed));
-        let frame_time = Instant::now() - tick_start;
-        show_text(
-            &mut canvas,
-            &font,
-            TextBackground::Solid(Color::BLACK),
-            0,
-            0,
-            &format!("{:.0}   ", 1. / frame_time.as_secs_f32()),
-        )?;
-        canvas.present();
     }
 
     Ok(())
