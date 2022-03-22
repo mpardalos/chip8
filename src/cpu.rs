@@ -33,7 +33,7 @@ pub enum StepResult {
 
 impl Display for CHIP8 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let instr = match Instruction::try_from(self.instruction_word_at(self.pc)) {
+        let instr = match self.current_instruction() {
             Ok(i) => format!("{}", i),
             Err(e) => e,
         };
@@ -172,8 +172,8 @@ impl CHIP8 {
         Ok(StepResult::Continue(false))
     }
 
-    fn instruction_word_at(&self, addr: u16) -> u16 {
-        u16::from_be_bytes([self.mem[addr as usize], self.mem[addr as usize + 1]])
+    pub fn current_instruction(&self) -> Result<Instruction, String> {
+        Instruction::try_from(u16::from_be_bytes([self.mem[self.pc as usize], self.mem[self.pc as usize + 1]]))
     }
 
     pub fn step(&mut self, keystate: &[bool; 16]) -> Result<StepResult, String> {
@@ -181,9 +181,7 @@ impl CHIP8 {
 
         self.delay = self.delay.saturating_sub(1);
 
-        let instr = Instruction::try_from(self.instruction_word_at(self.pc))?;
-
-        match instr {
+        match self.current_instruction()? {
             MOVE(x, y) => {
                 self.reg[x as usize] = self.reg[y as usize];
                 self.advance(2)

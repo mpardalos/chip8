@@ -16,17 +16,23 @@ use sdl2::{
 use crate::cpu::{StepResult, CHIP8, DISPLAY_COLS, DISPLAY_ROWS};
 
 const WINDOW_NAME: &str = "CHIP8";
-const WINDOW_WIDTH: u32 = 960;
-const WINDOW_HEIGHT: u32 = 540;
-const WINDOW_FPS: u32 = 60;
+const DISPLAY_WIDTH: u32 = 960;
+const DISPLAY_HEIGHT: u32 = 540;
 const TARGET_STEP_TIME: Duration = Duration::from_nanos(016666666);
 
 pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
+    // Load a font
+    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+    let mut font = ttf_context
+        .load_font("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf", 18)
+        .unwrap();
+    font.set_style(sdl2::ttf::FontStyle::BOLD);
+
     let sdl_context = sdl2::init().map_err(|e| e.to_string())?;
     let mut canvas: Canvas<Window> = sdl_context
         .video()
         .map_err(|e| e.to_string())?
-        .window(WINDOW_NAME, WINDOW_WIDTH, WINDOW_HEIGHT)
+        .window(WINDOW_NAME, DISPLAY_WIDTH, DISPLAY_HEIGHT + font.height() as u32)
         .position_centered()
         .build()
         .map_err(|e| e.to_string())?
@@ -34,13 +40,6 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
     let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
-
-    // Load a font
-    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
-    let mut font = ttf_context
-        .load_font("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf", 18)
-        .unwrap();
-    font.set_style(sdl2::ttf::FontStyle::BOLD);
 
     'running: loop {
         let tick_start = Instant::now();
@@ -96,6 +95,16 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
                 }
             }
         }
+
+        let instr = cpu.current_instruction()?;
+        show_text(
+            &mut canvas,
+            &font,
+            TextBackground::Solid(Color::BLACK),
+            0,
+            DISPLAY_HEIGHT as i32,
+            &format!("{}            ", instr),
+        )?;
 
         // Frame timing
         let tick_end = Instant::now();
