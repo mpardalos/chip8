@@ -56,24 +56,25 @@ pub fn run_gui(fps: u64, io: &Mutex<CHIP8IO>) -> Result<(), String> {
 
         // Take input
         let keyboard_state = event_pump.keyboard_state();
-        io.lock().unwrap().keystate = [
-            keyboard_state.is_scancode_pressed(Scancode::Num1),
-            keyboard_state.is_scancode_pressed(Scancode::Num2),
-            keyboard_state.is_scancode_pressed(Scancode::Num3),
-            keyboard_state.is_scancode_pressed(Scancode::Num4),
-            keyboard_state.is_scancode_pressed(Scancode::Q),
-            keyboard_state.is_scancode_pressed(Scancode::W),
-            keyboard_state.is_scancode_pressed(Scancode::E),
-            keyboard_state.is_scancode_pressed(Scancode::R),
-            keyboard_state.is_scancode_pressed(Scancode::A),
-            keyboard_state.is_scancode_pressed(Scancode::S),
-            keyboard_state.is_scancode_pressed(Scancode::D),
-            keyboard_state.is_scancode_pressed(Scancode::F),
-            keyboard_state.is_scancode_pressed(Scancode::Z),
-            keyboard_state.is_scancode_pressed(Scancode::X),
-            keyboard_state.is_scancode_pressed(Scancode::C),
-            keyboard_state.is_scancode_pressed(Scancode::V),
-        ];
+        {
+            let keystate = &mut io.lock().unwrap().keystate;
+            keystate[0x1] = keyboard_state.is_scancode_pressed(Scancode::Num1);
+            keystate[0x2] = keyboard_state.is_scancode_pressed(Scancode::Num2);
+            keystate[0x3] = keyboard_state.is_scancode_pressed(Scancode::Num3);
+            keystate[0xC] = keyboard_state.is_scancode_pressed(Scancode::Num4);
+            keystate[0x4] = keyboard_state.is_scancode_pressed(Scancode::Q);
+            keystate[0x5] = keyboard_state.is_scancode_pressed(Scancode::W);
+            keystate[0x6] = keyboard_state.is_scancode_pressed(Scancode::E);
+            keystate[0xD] = keyboard_state.is_scancode_pressed(Scancode::R);
+            keystate[0x7] = keyboard_state.is_scancode_pressed(Scancode::A);
+            keystate[0x8] = keyboard_state.is_scancode_pressed(Scancode::S);
+            keystate[0x9] = keyboard_state.is_scancode_pressed(Scancode::D);
+            keystate[0xE] = keyboard_state.is_scancode_pressed(Scancode::F);
+            keystate[0xA] = keyboard_state.is_scancode_pressed(Scancode::Z);
+            keystate[0x0] = keyboard_state.is_scancode_pressed(Scancode::X);
+            keystate[0xB] = keyboard_state.is_scancode_pressed(Scancode::C);
+            keystate[0xF] = keyboard_state.is_scancode_pressed(Scancode::V);
+        }
 
         // Draw display
         canvas.clear();

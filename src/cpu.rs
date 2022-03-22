@@ -47,8 +47,33 @@ pub enum StepResult {
     End,
 }
 
+fn wkey(f: &mut fmt::Formatter<'_>, keystate: [bool; 16], key: u8) -> fmt::Result {
+    if keystate[key as usize] { write!(f, "{:X}", key) } else { write!(f, "█") }
+}
+
 impl Display for CHIP8IO {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        wkey(f, self.keystate, 0x1)?;
+        wkey(f, self.keystate, 0x2)?;
+        wkey(f, self.keystate, 0x3)?;
+        wkey(f, self.keystate, 0xC)?;
+        writeln!(f)?;
+        wkey(f, self.keystate, 0x4)?;
+        wkey(f, self.keystate, 0x5)?;
+        wkey(f, self.keystate, 0x6)?;
+        wkey(f, self.keystate, 0xD)?;
+        writeln!(f)?;
+        wkey(f, self.keystate, 0x7)?;
+        wkey(f, self.keystate, 0x8)?;
+        wkey(f, self.keystate, 0x9)?;
+        wkey(f, self.keystate, 0xE)?;
+        writeln!(f)?;
+        wkey(f, self.keystate, 0xA)?;
+        wkey(f, self.keystate, 0x0)?;
+        wkey(f, self.keystate, 0xB)?;
+        wkey(f, self.keystate, 0xF)?;
+        writeln!(f)?;
+
         writeln!(
             f,
             "\n┌────────────────────────────────────────────────────────────────┐"
