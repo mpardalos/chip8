@@ -213,7 +213,7 @@ impl CHIP8 {
                 self.advance(2)
             }
             SUB(x, y) => {
-                self.reg[x as usize] -= self.reg[y as usize];
+                self.reg[x as usize] = self.reg[x as usize].wrapping_sub(self.reg[y as usize]);
                 self.advance(2)
             }
             SHR(x, y) => {
