@@ -17,6 +17,7 @@ pub struct CHIP8 {
     pub pc: u16,
     pub reg: [u8; 16],
     pub idx: u16,
+    pub delay: u8,
     pub mem: Box<[u8; 4096]>,
     pub display: [BitArray<[u64; 1], Msb0>; DISPLAY_ROWS],
 }
@@ -160,6 +161,7 @@ impl CHIP8 {
             idx: 0,
             pc: 0x200,
             stack: Vec::new(),
+            delay: 0,
             mem,
             display: [bitarr![u64, Msb0; 0; 64]; 32],
         }
@@ -176,6 +178,8 @@ impl CHIP8 {
 
     pub fn step(&mut self, keystate: &[bool; 16]) -> Result<StepResult, String> {
         use Instruction::*;
+
+        self.delay = self.delay.saturating_sub(1);
 
         let instr = Instruction::try_from(self.instruction_word_at(self.pc))?;
 
@@ -302,18 +306,47 @@ impl CHIP8 {
                 self.advance(2)
             }
             // Input
-            // TODO: Implement input
-            SKPR(_) => self.advance(2),
-            SKUP(_) => self.advance(2),
-            KEYD(_) => Err(format!("{:?}", instr)),
+            SKPR(x) => {
+                let keyidx: usize = self.reg[x as usize] as usize;
+                let pressed = *keystate.get(keyidx).unwrap_or(&false);
+                if pressed {
+                    self.advance(4)
+                } else {
+                    self.advance(2)
+                }
+            }
+            SKUP(x) => {
+                let keyidx: usize = self.reg[x as usize] as usize;
+                let pressed = *keystate.get(keyidx).unwrap_or(&false);
+                if pressed {
+                    self.advance(4)
+                } else {
+                    self.advance(2)
+                }
+            }
+            KEYD(x) => {
+                let keyidx: usize = self.reg[x as usize] as usize;
+                let pressed = *keystate.get(keyidx).unwrap_or(&false);
+                if pressed {
+                    self.advance(2)
+                } else {
+                    Ok(StepResult::Continue(false))
+                }
+            }
 
             // Sound
             // TODO: Implement sound
             LOADS(_) => self.advance(2),
 
             // Delays
-            MOVED(_) => Err(format!("{:?}", instr)),
-            LOADD(_) => Err(format!("{:?}", instr)),
+            MOVED(x) => {
+                self.reg[x as usize] = self.delay;
+                self.advance(2)
+            }
+            LOADD(x) => {
+                self.delay = self.reg[x as usize];
+                self.advance(2)
+            }
 
             // Index register
             ADDI(x) => {
