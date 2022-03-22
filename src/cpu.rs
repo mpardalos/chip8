@@ -11,6 +11,7 @@ use crate::instruction::Instruction;
 pub const DISPLAY_ROWS: usize = 32;
 pub const DISPLAY_COLS: usize = 64;
 
+#[derive(Debug)]
 pub struct CHIP8IO {
     pub keystate: [bool; 16],
     pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],

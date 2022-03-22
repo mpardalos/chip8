@@ -46,6 +46,10 @@ struct Args {
     #[clap(long, default_value_t = 60)]
     fps: u64,
 
+    /// Output debug information to the terminal
+    #[clap(short, long)]
+    debug: bool,
+
     /// Path to the rom file to load
     rom: String,
 }
@@ -78,6 +82,19 @@ fn main() {
     } else {
         let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
         let gui_io = cpu_io.clone();
+
+        if args.debug {
+            let debug_io = cpu_io.clone();
+            let _debug_thread = thread::spawn(move || {
+                let mut ticker = Instant::now();
+                loop {
+                    // Clear screen
+                    print!("\x1B[2J\n");
+                    println!("{}", debug_io.lock().unwrap());
+                    rate_limit(2, &mut ticker);
+                }
+            });
+        }
 
         let _cpu_thread = thread::spawn(move || {
             let mut cpu = CHIP8::new(&instruction_mem);
