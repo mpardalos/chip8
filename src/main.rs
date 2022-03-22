@@ -79,10 +79,12 @@ fn main() {
         let cpu = Arc::new(Mutex::new(CHIP8::new(&instruction_mem)));
         let core_cpu = cpu.clone();
 
-        let _cpu_thread = thread::spawn(move || -> ! {
+        let _cpu_thread = thread::spawn(move || {
             let mut ticker = Instant::now();
             loop {
-                core_cpu.lock().unwrap().step().unwrap();
+                if core_cpu.lock().unwrap().step().unwrap() == StepResult::End {
+                    break;
+                };
                 rate_limit(args.ips, &mut ticker);
             }
         });

@@ -24,6 +24,7 @@ pub struct CHIP8 {
 }
 
 /// Outcome of one step of execution
+#[derive(PartialEq, Eq)]
 pub enum StepResult {
     /// Program continues. Bool specifies whether the display was updated
     Continue(bool),
