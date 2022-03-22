@@ -5,7 +5,7 @@ mod instruction;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
-use std::{fs, thread::sleep, time::Duration};
+use std::{fs, time::Duration};
 
 use clap::Parser;
 

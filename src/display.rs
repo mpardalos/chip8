@@ -46,7 +46,6 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>) -> Result<(), String> {
 
     let mut ticker = Instant::now();
     'running: loop {
-        let tick_start = Instant::now();
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'running,
@@ -116,6 +115,7 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>) -> Result<(), String> {
     Ok(())
 }
 
+#[allow(dead_code)]
 enum TextBackground {
     Solid(Color),
     Transparent,
