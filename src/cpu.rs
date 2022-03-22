@@ -13,12 +13,12 @@ pub const DISPLAY_COLS: usize = 64;
 
 #[derive(Debug)]
 pub struct CHIP8 {
-    stack: Vec<u16>,
-    pc: u16,
-    reg: [u8; 16],
-    idx: u16,
-    mem: Box<[u8; 4096]>,
-    display: [BitArray<[u64; 1], Msb0>; 32],
+    pub stack: Vec<u16>,
+    pub pc: u16,
+    pub reg: [u8; 16],
+    pub idx: u16,
+    pub mem: Box<[u8; 4096]>,
+    pub display: [BitArray<[u64; 1], Msb0>; DISPLAY_ROWS],
 }
 
 /// Outcome of one step of execution
