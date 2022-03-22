@@ -1,9 +1,5 @@
-use std::cmp::min;
 use std::fmt::{self, Display};
 
-use bitvec::array::BitArray;
-
-use bitvec::prelude::*;
 use rand::prelude::*;
 
 use crate::instruction::Instruction;
@@ -19,7 +15,7 @@ pub struct CHIP8 {
     pub idx: u16,
     pub delay: u8,
     pub mem: Box<[u8; 4096]>,
-    pub display: [BitArray<[u64; 1], Msb0>; DISPLAY_ROWS],
+    pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],
 }
 
 /// Outcome of one step of execution
@@ -163,7 +159,7 @@ impl CHIP8 {
             stack: Vec::new(),
             delay: 0,
             mem,
-            display: [bitarr![u64, Msb0; 0; 64]; 32],
+            display: [[false; 64]; 32],
         }
     }
 
@@ -359,27 +355,31 @@ impl CHIP8 {
                 self.advance(2)
             }
             // Screen
-            DRAW(reg_x, reg_y, n) => {
-                let mut y = self.reg[reg_y as usize] as usize;
-                let x = self.reg[reg_x as usize] as usize;
+            DRAW(x, y, n) => {
+                let mut row = self.reg[y as usize] as usize;
                 let memidx = self.idx as usize;
 
                 self.reg[0x0F] = 0;
                 for byte in &self.mem[memidx..memidx + n as usize] {
-                    if *byte != 0 {
-                        self.reg[0x0F] = 1;
+                    let mut col = self.reg[x as usize] as usize;
+                    for bitidx in 0..8 {
+                        let bit = (byte & (1 << (7 - bitidx))) != 0;
+                        if self.display[row][col % DISPLAY_COLS] & bit {
+                            self.reg[0x0F] = 1;
+                        }
+
+                        self.display[row][col % DISPLAY_COLS] ^= bit;
+                        col += 1;
                     }
 
-                    self.display[y][x..min(x + 8, 64)].store_be(*byte);
-
-                    y += 1;
+                    row += 1;
                 }
 
                 let _ = self.advance(2);
                 Ok(StepResult::Continue(true))
             }
             CLR => {
-                self.display = [bitarr![u64, Msb0; 0; 64]; 32];
+                self.display = [[false; 64]; 32];
                 self.advance(2)
             }
             // Other
