@@ -58,7 +58,8 @@ fn main() {
             // wait_for_enter();
             sleep(Duration::from_millis(5));
             clear_screen();
-            match cpu.step() {
+            let keystate = [false; 16];
+            match cpu.step(&keystate) {
                 Ok(StepResult::End) => {
                     println!("Done!");
                     break;

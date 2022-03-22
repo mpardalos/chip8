@@ -174,7 +174,7 @@ impl CHIP8 {
         u16::from_be_bytes([self.mem[addr as usize], self.mem[addr as usize + 1]])
     }
 
-    pub fn step(&mut self) -> Result<StepResult, String> {
+    pub fn step(&mut self, keystate: &[bool; 16]) -> Result<StepResult, String> {
         use Instruction::*;
 
         let instr = Instruction::try_from(self.instruction_word_at(self.pc))?;
@@ -341,7 +341,7 @@ impl CHIP8 {
                     y += 1;
                 }
 
-                self.advance(2);
+                let _ = self.advance(2);
                 Ok(StepResult::Continue(true))
             }
             CLR => {

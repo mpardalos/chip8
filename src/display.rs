@@ -61,7 +61,8 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
 
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / target_fps));
 
-        match cpu.step()? {
+        let keystate = [false; 16];
+        match cpu.step(&keystate)? {
             StepResult::End => break 'running,
             StepResult::Continue(false) => {}
             StepResult::Continue(true) => {
