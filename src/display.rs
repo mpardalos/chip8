@@ -10,7 +10,7 @@ use sdl2::{
     video::Window,
 };
 
-use crate::cpu::CHIP8;
+use crate::cpu::{StepResult, CHIP8, DISPLAY_COLS, DISPLAY_ROWS};
 
 const WINDOW_NAME: &str = "CHIP8";
 const WINDOW_WIDTH: u32 = 960;
@@ -61,19 +61,47 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
 
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / target_fps));
 
-        let now = Instant::now();
-        let frametime = now - frame_time_counter;
-        frame_time_counter = now;
-        show_text(
-            &mut canvas,
-            &font,
-            TextBackground::Solid(Color::BLACK),
-            0,
-            0,
-            &format!("{:.0}", 1. / frametime.as_secs_f32()),
-        )
-        .unwrap();
-        canvas.present();
+        match cpu.step()? {
+            StepResult::End => break 'running,
+            StepResult::Continue(false) => {}
+            StepResult::Continue(true) => {
+                // Draw display
+                canvas.clear();
+                let (win_width, win_height) = canvas.window().size();
+                let pixel_width: u32 = win_width / DISPLAY_COLS as u32;
+                let pixel_height: u32 = win_height / DISPLAY_ROWS as u32;
+                let mut y: u32 = 0;
+                for row in cpu.display {
+                    let mut x: u32 = 0;
+                    for pixel in row {
+                        canvas.set_draw_color(if pixel { Color::BLUE } else { Color::BLACK });
+                        canvas.fill_rect(Rect::new(
+                            x as i32,
+                            y as i32,
+                            pixel_width,
+                            pixel_height,
+                        ))?;
+                        x += pixel_width;
+                    }
+                    y += pixel_height;
+                }
+
+                // Frame timing
+                let now = Instant::now();
+                let frametime = now - frame_time_counter;
+                frame_time_counter = now;
+                show_text(
+                    &mut canvas,
+                    &font,
+                    TextBackground::Solid(Color::BLACK),
+                    0,
+                    0,
+                    &format!("{:.0}", 1. / frametime.as_secs_f32()),
+                )
+                .unwrap();
+                canvas.present();
+            }
+        }
     }
 
     Ok(())
