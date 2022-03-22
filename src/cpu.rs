@@ -323,13 +323,13 @@ impl CHIP8 {
                 }
             }
             KEYD(x) => {
-                let keyidx: usize = self.reg[x as usize] as usize;
-                let pressed = *keystate.get(keyidx).unwrap_or(&false);
-                if pressed {
-                    self.advance(2)
-                } else {
-                    Ok(StepResult::Continue(false))
+                for (key, &pressed) in keystate.iter().enumerate() {
+                    if pressed {
+                        self.reg[x as usize] = key as u8;
+                        let _ = self.advance(2);
+                    }
                 }
+                Ok(StepResult::Continue(false))
             }
 
             // Sound
