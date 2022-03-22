@@ -51,8 +51,25 @@ pub fn run_window(mut cpu: CHIP8) -> Result<(), String> {
             }
         }
 
-
-        let keystate = [false; 16];
+        let keyboard_state = event_pump.keyboard_state();
+        let keystate = [
+            keyboard_state.is_scancode_pressed(Scancode::Num1),
+            keyboard_state.is_scancode_pressed(Scancode::Num2),
+            keyboard_state.is_scancode_pressed(Scancode::Num3),
+            keyboard_state.is_scancode_pressed(Scancode::Num4),
+            keyboard_state.is_scancode_pressed(Scancode::Q),
+            keyboard_state.is_scancode_pressed(Scancode::W),
+            keyboard_state.is_scancode_pressed(Scancode::E),
+            keyboard_state.is_scancode_pressed(Scancode::R),
+            keyboard_state.is_scancode_pressed(Scancode::A),
+            keyboard_state.is_scancode_pressed(Scancode::S),
+            keyboard_state.is_scancode_pressed(Scancode::D),
+            keyboard_state.is_scancode_pressed(Scancode::F),
+            keyboard_state.is_scancode_pressed(Scancode::Z),
+            keyboard_state.is_scancode_pressed(Scancode::X),
+            keyboard_state.is_scancode_pressed(Scancode::C),
+            keyboard_state.is_scancode_pressed(Scancode::V),
+        ];
         match cpu.step(&keystate)? {
             StepResult::End => break 'running,
             StepResult::Continue(false) => {}
