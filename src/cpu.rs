@@ -17,6 +17,7 @@ pub struct CHIP8 {
     pub reg: [u8; 16],
     pub idx: u16,
     pub delay: u8,
+    pub keystate: [bool; 16],
     tick: time::Instant,
     pub mem: Box<[u8; 4096]>,
     pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],
@@ -165,6 +166,7 @@ impl CHIP8 {
             tick: time::Instant::now(),
             mem,
             display: [[false; 64]; 32],
+            keystate: [false; 16],
         }
     }
 
@@ -180,7 +182,7 @@ impl CHIP8 {
         ]))
     }
 
-    pub fn step(&mut self, keystate: &[bool; 16]) -> Result<StepResult, String> {
+    pub fn step(&mut self) -> Result<StepResult, String> {
         use Instruction::*;
 
         if time::Instant::now() - self.tick > time::Duration::from_millis(016) {
@@ -313,7 +315,7 @@ impl CHIP8 {
             // Input
             SKPR(x) => {
                 let keyidx: usize = self.reg[x as usize] as usize;
-                let pressed = *keystate.get(keyidx).unwrap_or(&false);
+                let pressed = *self.keystate.get(keyidx).unwrap_or(&false);
                 if pressed {
                     self.advance(4)
                 } else {
@@ -322,7 +324,7 @@ impl CHIP8 {
             }
             SKUP(x) => {
                 let keyidx: usize = self.reg[x as usize] as usize;
-                let pressed = *keystate.get(keyidx).unwrap_or(&false);
+                let pressed = *self.keystate.get(keyidx).unwrap_or(&false);
                 if pressed {
                     self.advance(4)
                 } else {
@@ -330,7 +332,7 @@ impl CHIP8 {
                 }
             }
             KEYD(x) => {
-                for (key, &pressed) in keystate.iter().enumerate() {
+                for (key, &pressed) in self.keystate.iter().enumerate() {
                     if pressed {
                         self.reg[x as usize] = key as u8;
                         let _ = self.advance(2);

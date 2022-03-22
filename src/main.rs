@@ -2,13 +2,35 @@ mod cpu;
 mod display;
 mod instruction;
 
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Instant;
 use std::{fs, thread::sleep, time::Duration};
 
 use clap::Parser;
 
 use crate::cpu::{StepResult, CHIP8};
-use crate::display::run_window;
+use crate::display::run_gui;
 use crate::instruction::Instruction;
+
+/// Call this in a loop to limit how many times per second the loop runs
+pub fn rate_limit(ticks_per_sec: u64, ticker: &mut Instant) -> (Duration, Duration) {
+    let last_tick = *ticker;
+    let task_end = Instant::now();
+    let busy_elapsed = task_end - *ticker;
+    let target = Duration::from_nanos(1_000_000_000 / ticks_per_sec);
+
+    if target > busy_elapsed {
+        thread::sleep(target - busy_elapsed);
+    }
+
+    let loop_end = Instant::now();
+    let full_elapsed = loop_end - last_tick;
+
+    *ticker = loop_end;
+
+    (busy_elapsed, full_elapsed)
+}
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -19,6 +41,14 @@ struct Args {
     /// Dump instructions loaded from rom file at the start
     #[clap(long, group = "goal")]
     dump_code: bool,
+
+    /// Instructions per second
+    #[clap(long, default_value_t = 1000)]
+    ips: u64,
+
+    /// Frames per second
+    #[clap(long, default_value_t = 60)]
+    fps: u64,
 
     /// Path to the rom file to load
     rom: String,
@@ -58,8 +88,7 @@ fn main() {
             // wait_for_enter();
             sleep(Duration::from_millis(5));
             clear_screen();
-            let keystate = [false; 16];
-            match cpu.step(&keystate) {
+            match cpu.step() {
                 Ok(StepResult::End) => {
                     println!("Done!");
                     break;
@@ -72,7 +101,18 @@ fn main() {
             }
         }
     } else {
-        run_window(CHIP8::new(&instruction_mem)).expect("run GUI");
+        let cpu = Arc::new(Mutex::new(CHIP8::new(&instruction_mem)));
+        let core_cpu = cpu.clone();
+
+        let _cpu_thread = thread::spawn(move || -> ! {
+            let mut ticker = Instant::now();
+            loop {
+                core_cpu.lock().unwrap().step().unwrap();
+                rate_limit(args.ips, &mut ticker);
+            }
+        });
+
+        run_gui(args.fps, &cpu).unwrap();
     }
 }
 
