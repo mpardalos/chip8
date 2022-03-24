@@ -138,7 +138,7 @@ fn main() {
 
         Args::Analyze { .. } => {
             analyze(
-                instruction_mem
+                &instruction_mem
                     .chunks_exact(2)
                     .into_iter()
                     .map(|a| u16::from_be_bytes([a[0], a[1]]))

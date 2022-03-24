@@ -6,7 +6,7 @@ pub type Reg = u8;
 pub type RegVal = u8;
 pub type ShortVal = u8;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Instruction {
     /// Opcode: 0nnn
     SYS(u16),

@@ -3,13 +3,23 @@ use std::rc::{Rc, Weak};
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::*;
 
-type SrcProgram = Vec<(u16, Result<Instruction, String>)>;
+type SrcProgram<'a> = &'a [(u16, Result<Instruction, String>)];
 type Pc = u16;
 
 pub fn analyze(prog: SrcProgram) {
-    println!("Starts:");
-    for addr in block_starts(prog) {
-        println!("  -> {:#x}", addr);
+    let starts = block_starts(prog);
+    let blocks = starts.iter().map(|&start| (start, block_from(prog, start)));
+
+    println!("Blocks:");
+    for (start, m_block) in blocks {
+        println!("{:#x}:", start);
+        if let Some(block) = m_block {
+            for instr in block.code {
+                println!("  {}", instr);
+            }
+        } else {
+            println!("INVALID");
+        }
     }
 }
 
@@ -29,6 +39,23 @@ fn block_starts(prog: SrcProgram) -> Vec<Pc> {
     starts
 }
 
+fn block_from(prog: SrcProgram, start_pc: Pc) -> Option<Block> {
+    let mut block = Block::new_empty();
+    let mut idx = start_pc.checked_sub(0x200)? / 2;
+    loop {
+        let instr = prog[idx as usize].1.as_ref().ok()?;
+        block.code.push(*instr);
+
+        if instr.branches()  {
+            break;
+        }
+
+        idx += 1;
+    }
+
+    Some(block)
+}
+
 struct Block {
     code: Vec<Instruction>,
 
@@ -38,8 +65,19 @@ struct Block {
     next: Vec<Rc<Block>>,
 }
 
+impl Block {
+    fn new_empty() -> Self {
+        Block {
+            code: Vec::new(),
+            prev: Vec::new(),
+            next: Vec::new(),
+        }
+    }
+}
+
 trait AnalyzeInstruction {
     fn next_pc(&self, this_pc: Pc) -> Vec<Pc>;
+    fn branches(&self) -> bool;
 }
 
 impl AnalyzeInstruction for Instruction {
@@ -50,5 +88,9 @@ impl AnalyzeInstruction for Instruction {
             }
             _ => vec![this_pc + 2],
         }
+    }
+
+    fn branches(&self) -> bool {
+        self.next_pc(0).len() > 1
     }
 }
