@@ -1,3 +1,4 @@
+mod analyze;
 mod cpu;
 mod display;
 mod instruction;
@@ -7,6 +8,7 @@ use std::thread;
 use std::time::Instant;
 use std::{fs, time::Duration};
 
+use analyze::analyze;
 use clap::Parser;
 
 use crate::cpu::{StepResult, CHIP8, CHIP8IO};
@@ -33,80 +35,116 @@ pub fn rate_limit(ticks_per_sec: u64, ticker: &mut Instant) -> (Duration, Durati
 }
 
 #[derive(Parser, Debug)]
-struct Args {
-    /// Dump instructions loaded from rom file at the start
-    #[clap(long)]
-    dump_code: bool,
+enum Args {
+    /// What can we learn from the ROM file?
+    Analyze {
+        /// Path to the rom file to load
+        rom: String,
+    },
+    /// Dump instructions
+    Dump {
+        /// Path to the rom file to load
+        rom: String,
+    },
+    /// Run the ROM
+    Run {
+        /// Instructions per second
+        #[clap(long, default_value_t = 1000)]
+        ips: u64,
 
-    /// Instructions per second
-    #[clap(long, default_value_t = 1000)]
-    ips: u64,
+        /// Frames per second
+        #[clap(long, default_value_t = 60)]
+        fps: u64,
 
-    /// Frames per second
-    #[clap(long, default_value_t = 60)]
-    fps: u64,
+        /// Output debug information to the terminal
+        #[clap(short, long)]
+        debug: bool,
 
-    /// Output debug information to the terminal
-    #[clap(short, long)]
-    debug: bool,
+        /// Path to the rom file to load
+        rom: String,
+    },
+}
 
-    /// Path to the rom file to load
-    rom: String,
+impl Args {
+    fn rom_bytes(&self) -> Vec<u8> {
+        let rom = match self {
+            Args::Analyze { rom, .. } => rom,
+            Args::Run { rom, .. } => rom,
+            Args::Dump { rom, .. } => rom,
+        };
+
+        println!("Reading file {}", rom);
+        fs::read(&rom).expect("open input file")
+    }
 }
 
 fn main() {
     let args = Args::parse();
+    let instruction_mem: Vec<u8> = args.rom_bytes();
+    match args {
+        Args::Dump { .. } => {
+            let instructions = instruction_mem
+                .chunks_exact(2)
+                .into_iter()
+                .map(|a| u16::from_be_bytes([a[0], a[1]]))
+                .map(|x| (x, Instruction::try_from(x)))
+                .collect::<Vec<_>>();
 
-    println!("Reading file {}", args.rom);
-    let instruction_mem: Vec<u8> = fs::read(&args.rom).expect("open input file");
+            println!("Initial RAM: ");
+            let mut addr = 0x200;
+            for (bits, m_instruction) in instructions {
+                if let Ok(i) = m_instruction {
+                    println!("{:#x}: {:x} - {}", addr, bits, i);
+                } else {
+                    println!("{:#x}: {:x} - ????", addr, bits);
+                }
 
-    if args.dump_code {
-        let instructions = instruction_mem
-            .chunks_exact(2)
-            .into_iter()
-            .map(|a| u16::from_be_bytes([a[0], a[1]]))
-            .map(|x| (x, Instruction::try_from(x)))
-            .collect::<Vec<_>>();
+                addr += 2;
+            }
+        }
 
-        println!("Initial RAM: ");
-        let mut addr = 0x200;
-        for (bits, m_instruction) in instructions {
-            if let Ok(i) = m_instruction {
-                println!("{:#x}: {:x} - {}", addr, bits, i);
-            } else {
-                println!("{:#x}: {:x} - ????", addr, bits);
+        Args::Run {
+            debug, ips, fps, ..
+        } => {
+            let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
+            let gui_io = cpu_io.clone();
+
+            if debug {
+                let debug_io = cpu_io.clone();
+                let _debug_thread = thread::spawn(move || {
+                    let mut ticker = Instant::now();
+                    loop {
+                        // Clear screen
+                        print!("\x1B[2J\n");
+                        println!("{}", debug_io.lock().unwrap());
+                        rate_limit(2, &mut ticker);
+                    }
+                });
             }
 
-            addr += 2;
-        }
-    } else {
-        let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
-        let gui_io = cpu_io.clone();
-
-        if args.debug {
-            let debug_io = cpu_io.clone();
-            let _debug_thread = thread::spawn(move || {
+            let _cpu_thread = thread::spawn(move || {
+                let mut cpu = CHIP8::new(&instruction_mem);
                 let mut ticker = Instant::now();
                 loop {
-                    // Clear screen
-                    print!("\x1B[2J\n");
-                    println!("{}", debug_io.lock().unwrap());
-                    rate_limit(2, &mut ticker);
+                    if cpu.step(&cpu_io).unwrap() == StepResult::End {
+                        break;
+                    };
+                    rate_limit(ips, &mut ticker);
                 }
             });
+
+            run_gui(fps, &gui_io).unwrap();
         }
 
-        let _cpu_thread = thread::spawn(move || {
-            let mut cpu = CHIP8::new(&instruction_mem);
-            let mut ticker = Instant::now();
-            loop {
-                if cpu.step(&cpu_io).unwrap() == StepResult::End {
-                    break;
-                };
-                rate_limit(args.ips, &mut ticker);
-            }
-        });
-
-        run_gui(args.fps, &gui_io).unwrap();
-    }
+        Args::Analyze { .. } => {
+            analyze(
+                instruction_mem
+                    .chunks_exact(2)
+                    .into_iter()
+                    .map(|a| u16::from_be_bytes([a[0], a[1]]))
+                    .map(|x| (x, Instruction::try_from(x)))
+                    .collect::<Vec<_>>(),
+            );
+        }
+    };
 }
