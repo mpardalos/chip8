@@ -17,8 +17,14 @@ pub fn analyze(prog: SrcProgram) {
             for instr in block.code {
                 println!("  {}", instr);
             }
+
+            print!("  -> ");
+            for pc in block.next {
+                print!("{:#x} ", pc);
+            }
+            println!("\n");
         } else {
-            println!("INVALID");
+            println!("  INVALID\n");
         }
     }
 }
@@ -39,18 +45,28 @@ fn block_starts(prog: SrcProgram) -> Vec<Pc> {
     starts
 }
 
+fn addr_to_idx(addr: Pc) -> Option<usize> {
+    Some(addr.checked_sub(0x200)? as usize / 2)
+}
+
+fn idx_to_addr(idx: usize) -> Pc {
+    200 * (idx * 2) as Pc
+}
+
 fn block_from(prog: SrcProgram, start_pc: Pc) -> Option<Block> {
     let mut block = Block::new_empty();
-    let mut idx = start_pc.checked_sub(0x200)? / 2;
+    let mut pc = start_pc;
     loop {
-        let instr = prog[idx as usize].1.as_ref().ok()?;
+        let instr = prog[addr_to_idx(pc)?].1.as_ref().ok()?;
         block.code.push(*instr);
 
-        if instr.branches()  {
+        let nexts = instr.next_pc(pc);
+        if nexts.len() > 1 {
+            block.next = nexts;
             break;
         }
 
-        idx += 1;
+        pc += 2;
     }
 
     Some(block)
@@ -59,10 +75,8 @@ fn block_from(prog: SrcProgram, start_pc: Pc) -> Option<Block> {
 struct Block {
     code: Vec<Instruction>,
 
-    prev: Vec<Weak<Block>>,
-
-    // TODO: Leaks? Maybe it's fine since this does not run for too long anyways
-    next: Vec<Rc<Block>>,
+    prev: Vec<Pc>,
+    next: Vec<Pc>,
 }
 
 impl Block {
