@@ -25,13 +25,22 @@ impl CFG {
             })
             .collect();
 
-        // Fill in prev pointers
         for (pc, block) in contents.clone().iter_mut() {
             for next_pc in block.next.iter_mut() {
-                if let Some(next) = contents.get_mut(&next_pc) {
-                    next.prev.push(*pc);
-                } else {
-                    println!("invalid next pointer: {:#x}", next_pc);
+                match contents.get_mut(&next_pc) {
+                    Some(next) => {
+                        next.prev.push(*pc);
+                    }
+                    None => {
+                        contents.insert(
+                            *next_pc,
+                            Block {
+                                prev: vec![*pc],
+                                next: vec![],
+                                code: vec![],
+                            },
+                        );
+                    }
                 }
             }
         }
