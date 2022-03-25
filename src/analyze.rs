@@ -50,14 +50,24 @@ impl CFG {
         cfg
     }
 
-    fn debug_print(&self) {
+    fn debug_print(&self, terse: bool) {
         let mut block_pcs = self.contents.keys().collect::<Vec<_>>();
         block_pcs.sort();
         for start in block_pcs {
             let block = &self.contents[start];
+            if terse {
+                if (block.prev.is_empty() || block.code.is_empty()) && *start != 0x200 {
+                    continue;
+                }
+            }
+
             print!("{:#x}:", start);
 
             print!(" <- ");
+            if *start == 0x200 {
+                print!("START ");
+            }
+
             for pc in &block.prev {
                 print!("{:#x} ", pc);
             }
@@ -140,14 +150,10 @@ pub fn analyze(prog: SrcProgram) {
         Err(_) => None,
     }));
 
-    println!("Complete flow graph:");
-    flow_graph.debug_print();
-    flow_graph.assert_valid();
-
     flow_graph.reduce();
 
-    println!("Reduced flow graph:");
-    flow_graph.debug_print();
+    println!("Control flow graph:");
+    flow_graph.debug_print(true);
     flow_graph.assert_valid();
 }
 
