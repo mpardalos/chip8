@@ -32,14 +32,9 @@ impl CFG {
                         next.prev.push(*pc);
                     }
                     None => {
-                        contents.insert(
-                            *next_pc,
-                            Block {
-                                prev: vec![*pc],
-                                next: vec![],
-                                code: vec![],
-                            },
-                        );
+                        let mut block = Block::new_empty();
+                        block.prev = vec![*pc];
+                        contents.insert(*next_pc, block);
                     }
                 }
             }
@@ -50,7 +45,7 @@ impl CFG {
         cfg
     }
 
-    fn debug_print(&self, terse: bool) {
+    fn debug_print(&self, terse: bool, skip_unreachable: bool) {
         let mut block_pcs = self.contents.keys().collect::<Vec<_>>();
         block_pcs.sort();
         for start in block_pcs {
@@ -59,6 +54,10 @@ impl CFG {
                 if (block.prev.is_empty() || block.code.is_empty()) && *start != 0x200 {
                     continue;
                 }
+            }
+
+            if skip_unreachable && !block.reachable {
+                continue;
             }
 
             print!("{:#x}:", start);
@@ -71,6 +70,15 @@ impl CFG {
             for pc in &block.prev {
                 print!("{:#x} ", pc);
             }
+
+            // Flags
+            print!(" | ");
+            if block.reachable {
+                print!(" R")
+            } else {
+                print!("!R")
+            }
+
             println!();
 
             for instr in &block.code {
@@ -142,6 +150,24 @@ impl CFG {
             }
         }
     }
+
+    fn reachability_analysis(&mut self, start: Pc) {
+        let block = self
+            .contents
+            .get_mut(&start)
+            .expect(&format!("block {}", start));
+        // Already analysed
+        if block.reachable {
+            return;
+        }
+        block.reachable = true;
+
+        let nexts = block.next.clone();
+
+        for next in nexts {
+            self.reachability_analysis(next);
+        }
+    }
 }
 
 pub fn analyze(prog: SrcProgram) {
@@ -151,9 +177,10 @@ pub fn analyze(prog: SrcProgram) {
     }));
 
     flow_graph.reduce();
+    flow_graph.reachability_analysis(0x200);
 
     println!("Control flow graph:");
-    flow_graph.debug_print(true);
+    flow_graph.debug_print(true, true);
     flow_graph.assert_valid();
 }
 
@@ -170,9 +197,11 @@ fn idx_to_addr(idx: usize) -> Pc {
 #[derive(Clone)]
 struct Block {
     code: Vec<Instruction>,
-
     prev: Vec<Pc>,
     next: Vec<Pc>,
+
+    // Other flags
+    reachable: bool,
 }
 
 impl Block {
@@ -181,6 +210,8 @@ impl Block {
             code: Vec::new(),
             prev: Vec::new(),
             next: Vec::new(),
+
+            reachable: false,
         }
     }
 
@@ -189,6 +220,8 @@ impl Block {
             code: vec![instr],
             prev: vec![],
             next: instr.next_pc(pc),
+
+            reachable: false,
         }
     }
 
