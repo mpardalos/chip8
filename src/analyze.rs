@@ -69,6 +69,15 @@ impl CFG {
     fn assert_valid(&self) -> &Self {
         for (pc, block) in &self.contents {
             for next in &block.next {
+                // Next exists
+                assert!(
+                    self.contents.contains_key(&next),
+                    "Invalid CFG: {:#x} -> {:#x}, which does not exist",
+                    pc,
+                    next
+                );
+
+                // Next and prev pointers match
                 assert!(
                     self.contents[next].prev.contains(&pc),
                     "Invalid CFG: {:#x} -> {:#x} but not the other way",
