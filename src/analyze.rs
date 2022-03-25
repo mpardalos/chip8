@@ -6,12 +6,12 @@ use crate::instruction::Instruction::*;
 type SrcProgram<'a> = &'a [(u16, Result<Instruction, String>)];
 type Pc = u16;
 
-struct Cfg {
+struct CFG {
     contents: HashMap<Pc, Block>,
 }
 
-impl Cfg {
-    fn from_rom(rom: impl Iterator<Item = Option<Instruction>>) -> Cfg {
+impl CFG {
+    fn from_rom(rom: impl Iterator<Item = Option<Instruction>>) -> CFG {
         let mut pc = 0x200;
         let mut contents: HashMap<Pc, Block> = rom
             .map(|m_instr| {
@@ -36,7 +36,7 @@ impl Cfg {
             }
         }
 
-        let cfg = Cfg { contents };
+        let cfg = CFG { contents };
         cfg.assert_valid();
         cfg
     }
@@ -117,7 +117,7 @@ impl Cfg {
 }
 
 pub fn analyze(prog: SrcProgram) {
-    let mut flow_graph = Cfg::from_rom(prog.iter().map(|(_, m_instr)| match m_instr {
+    let mut flow_graph = CFG::from_rom(prog.iter().map(|(_, m_instr)| match m_instr {
         Ok(instr) => Some(*instr),
         Err(_) => None,
     }));
