@@ -56,9 +56,13 @@ enum Args {
         #[clap(long, default_value_t = 60)]
         fps: u64,
 
-        /// Output debug information to the terminal
-        #[clap(short, long)]
-        debug: bool,
+        /// Output I/O debug information to the terminal
+        #[clap(long)]
+        debug_io: bool,
+
+        /// Output CPU debug information to the terminal
+        #[clap(long)]
+        debug_cpu: bool,
 
         /// Path to the rom file to load
         rom: String,
@@ -104,18 +108,20 @@ fn main() {
         }
 
         Args::Run {
-            debug, ips, fps, ..
+            debug_cpu,
+            debug_io,
+            ips,
+            fps,
+            ..
         } => {
             let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
             let gui_io = cpu_io.clone();
 
-            if debug {
+            if debug_io {
                 let debug_io = cpu_io.clone();
                 let _debug_thread = thread::spawn(move || {
                     let mut ticker = Instant::now();
                     loop {
-                        // Clear screen
-                        print!("\x1B[2J\n");
                         println!("{}", debug_io.lock().unwrap());
                         rate_limit(2, &mut ticker);
                     }
@@ -129,6 +135,10 @@ fn main() {
                     if cpu.step(&cpu_io).unwrap() == StepResult::End {
                         break;
                     };
+
+                    if debug_cpu {
+                        println!("{}", cpu);
+                    }
                     rate_limit(ips, &mut ticker);
                 }
             });
