@@ -11,6 +11,7 @@ use sdl2::{
 };
 
 use crate::cpu::{CHIP8, CHIP8IO};
+use crate::instruction::Instruction;
 use crate::{
     cpu::{DISPLAY_COLS, DISPLAY_ROWS},
     rate_limit,
@@ -80,38 +81,58 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>, io: &Mutex<CHIP8IO>) -> Result<(), 
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
-        // Draw debug info
+        // Draw register state
         {
             let register_state = cpu.lock().unwrap().reg;
-            let x: i32 = DISPLAY_WIDTH as i32 + 10;
-            let mut y: i32 = 0;
+            {
+                let x: i32 = DISPLAY_WIDTH as i32 + 10;
+                let mut y: i32 = 0;
 
-            canvas.set_draw_color(Color::YELLOW);
-            canvas.draw_rect(Rect::new(
-                x,
-                y,
-                font.size_of_char('O').unwrap().0 as u32 * 10,
-                font.height() as u32 * register_state.len() as u32,
-            ));
-
-            for (reg, val) in register_state.iter().enumerate() {
-                show_text(
-                    &mut canvas,
-                    &font,
-                    TextBackground::Transparent,
+                canvas.set_draw_color(Color::YELLOW);
+                canvas.draw_rect(Rect::new(
                     x,
                     y,
-                    &format!("v{:X} | {:#x}", reg, val),
-                )?;
-                y += font.height();
+                    font.size_of_char('O').unwrap().0 as u32 * 10,
+                    font.height() as u32 * register_state.len() as u32,
+                ));
+
+                for (reg, val) in register_state.iter().enumerate() {
+                    show_text(
+                        &mut canvas,
+                        &font,
+                        TextBackground::Transparent,
+                        x,
+                        y,
+                        &format!("v{:X} | {:#x}", reg, val),
+                    )?;
+                    y += font.height();
+                }
+            }
+
+            // Draw waiting for key
+            {
+                let x = 0;
+                let y = DISPLAY_HEIGHT as i32 + 10;
+                if let Ok(current_instr) = cpu.lock().unwrap().current_instruction() {
+                    let text = match current_instr {
+                        Instruction::SKPR(r) => {
+                            let key = register_state[r as usize];
+                            format!("Checking {:X}", key)
+                        }
+                        Instruction::SKUP(r) => {
+                            let key = register_state[r as usize];
+                            format!("Checking {:X}", key)
+                        }
+                        Instruction::KEYD(_) => format!("Waiting for a key"),
+                        _ => format!(" "),
+                    };
+                    show_text(&mut canvas, &font, TextBackground::Transparent, x, y, &text)?;
+                }
             }
         }
 
         // Draw display
         {
-            canvas.set_draw_color(Color::YELLOW);
-            canvas.draw_rect(Rect::new(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT))?;
-
             let mut y: u32 = 0;
             for row in io.lock().unwrap().display {
                 let mut x: u32 = 0;
@@ -133,6 +154,9 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>, io: &Mutex<CHIP8IO>) -> Result<(), 
                 0,
                 &format!("{:.0}   ", 1. / frame_time.as_secs_f32()),
             )?;
+
+            canvas.set_draw_color(Color::YELLOW);
+            canvas.draw_rect(Rect::new(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT))?;
         }
         canvas.present();
     }
