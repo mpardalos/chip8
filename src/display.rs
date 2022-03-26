@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::{sync::Mutex, time::Instant};
 
 use sdl2::keyboard::Scancode;
@@ -47,6 +48,8 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>, io: &Mutex<CHIP8IO>) -> Result<(), 
         .map_err(|e| e.to_string())?;
     let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
 
+    let mut checked_keys: HashSet<u8> = HashSet::new();
+    let mut checked_registers: HashSet<u8> = HashSet::new();
     let mut ticker = Instant::now();
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -153,16 +156,38 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>, io: &Mutex<CHIP8IO>) -> Result<(), 
                     let text = match current_instr {
                         Instruction::SKPR(r) => {
                             let key = register_state[r as usize];
+                            checked_registers.insert(r);
+                            checked_keys.insert(key);
                             format!("Checking {:X}", key)
                         }
                         Instruction::SKUP(r) => {
                             let key = register_state[r as usize];
+                            checked_registers.insert(r);
+                            checked_keys.insert(key);
                             format!("Checking {:X}", key)
                         }
                         Instruction::KEYD(_) => format!("Waiting for a key"),
                         _ => format!(" "),
                     };
                     show_text(&mut canvas, &font, TextBackground::Transparent, x, y, &text)?;
+                    y += font.height();
+                    show_text(
+                        &mut canvas,
+                        &font,
+                        TextBackground::Transparent,
+                        x,
+                        y,
+                        &format!("Checked keys: {:?}", checked_keys),
+                    )?;
+                    y += font.height();
+                    show_text(
+                        &mut canvas,
+                        &font,
+                        TextBackground::Transparent,
+                        x,
+                        y,
+                        &format!("Checked registers: {:?}", checked_registers),
+                    )?;
                 }
             }
         }
