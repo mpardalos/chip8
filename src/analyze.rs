@@ -6,8 +6,34 @@ use crate::instruction::Instruction::*;
 type SrcProgram<'a> = &'a [(u16, Result<Instruction, String>)];
 type Pc = u16;
 
+pub fn analyze(prog: SrcProgram) {
+    let mut flow_graph = CFG::from_rom(prog.iter().map(|(_, m_instr)| match m_instr {
+        Ok(instr) => Some(*instr),
+        Err(_) => None,
+    }));
+
+    flow_graph.reduce();
+    flow_graph.reachability_analysis(0x200);
+
+    println!("Control flow graph:");
+    flow_graph.debug_print(true, true);
+    flow_graph.assert_valid();
+}
+
+// ---------
+
 struct CFG {
     contents: HashMap<Pc, Block>,
+}
+
+#[derive(Clone)]
+struct Block {
+    code: Vec<Instruction>,
+    prev: Vec<Pc>,
+    next: Vec<Pc>,
+
+    // Other flags
+    reachable: bool,
 }
 
 impl CFG {
@@ -170,40 +196,6 @@ impl CFG {
     }
 }
 
-pub fn analyze(prog: SrcProgram) {
-    let mut flow_graph = CFG::from_rom(prog.iter().map(|(_, m_instr)| match m_instr {
-        Ok(instr) => Some(*instr),
-        Err(_) => None,
-    }));
-
-    flow_graph.reduce();
-    flow_graph.reachability_analysis(0x200);
-
-    println!("Control flow graph:");
-    flow_graph.debug_print(true, true);
-    flow_graph.assert_valid();
-}
-
-#[allow(dead_code)]
-fn addr_to_idx(addr: Pc) -> Option<usize> {
-    Some(addr.checked_sub(0x200)? as usize / 2)
-}
-
-#[allow(dead_code)]
-fn idx_to_addr(idx: usize) -> Pc {
-    200 * (idx * 2) as Pc
-}
-
-#[derive(Clone)]
-struct Block {
-    code: Vec<Instruction>,
-    prev: Vec<Pc>,
-    next: Vec<Pc>,
-
-    // Other flags
-    reachable: bool,
-}
-
 impl Block {
     fn new_empty() -> Self {
         Block {
@@ -263,4 +255,14 @@ impl AnalyzeInstruction for Instruction {
     fn branches(&self) -> bool {
         self.next_pc(0).len() > 1
     }
+}
+
+#[allow(dead_code)]
+fn addr_to_idx(addr: Pc) -> Option<usize> {
+    Some(addr.checked_sub(0x200)? as usize / 2)
+}
+
+#[allow(dead_code)]
+fn idx_to_addr(idx: usize) -> Pc {
+    200 * (idx * 2) as Pc
 }
