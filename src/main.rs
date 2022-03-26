@@ -1,6 +1,6 @@
 mod analyze;
 mod cpu;
-mod display;
+mod gui;
 mod instruction;
 
 use std::sync::{Arc, Mutex};
@@ -12,7 +12,7 @@ use analyze::analyze;
 use clap::Parser;
 
 use crate::cpu::{StepResult, CHIP8, CHIP8IO};
-use crate::display::run_gui;
+use crate::gui::run_gui;
 use crate::instruction::Instruction;
 
 /// Call this in a loop to limit how many times per second the loop runs
