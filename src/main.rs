@@ -117,6 +117,9 @@ fn main() {
             let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
             let gui_io = cpu_io.clone();
 
+            let core_cpu = Arc::new(Mutex::new(CHIP8::new(&instruction_mem)));
+            let gui_cpu = core_cpu.clone();
+
             if debug_io {
                 let debug_io = cpu_io.clone();
                 let _debug_thread = thread::spawn(move || {
@@ -129,21 +132,20 @@ fn main() {
             }
 
             let _cpu_thread = thread::spawn(move || {
-                let mut cpu = CHIP8::new(&instruction_mem);
                 let mut ticker = Instant::now();
                 loop {
-                    if cpu.step(&cpu_io).unwrap() == StepResult::End {
+                    if core_cpu.lock().unwrap().step(&cpu_io).unwrap() == StepResult::End {
                         break;
                     };
 
                     if debug_cpu {
-                        println!("{}", cpu);
+                        println!("{}", core_cpu.lock().unwrap());
                     }
                     rate_limit(ips, &mut ticker);
                 }
             });
 
-            run_gui(fps, &gui_io).unwrap();
+            run_gui(fps, &gui_cpu, &gui_io).unwrap();
         }
 
         Args::Analyze { .. } => {
