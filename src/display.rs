@@ -83,18 +83,17 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>, io: &Mutex<CHIP8IO>) -> Result<(), 
 
         // Draw register state
         {
+            let mut x: i32 = DISPLAY_WIDTH as i32 + 10;
+            let mut y: i32 = 0;
             let register_state = cpu.lock().unwrap().reg;
             {
-                let x: i32 = DISPLAY_WIDTH as i32 + 10;
-                let mut y: i32 = 0;
-
                 canvas.set_draw_color(Color::YELLOW);
                 canvas.draw_rect(Rect::new(
                     x,
                     y,
                     font.size_of_char('O').unwrap().0 as u32 * 10,
                     font.height() as u32 * register_state.len() as u32,
-                ));
+                ))?;
 
                 for (reg, val) in register_state.iter().enumerate() {
                     show_text(
@@ -109,10 +108,47 @@ pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>, io: &Mutex<CHIP8IO>) -> Result<(), 
                 }
             }
 
+            // Draw keypad
+            {
+                let start_x = x;
+                y += 5;
+                const SIZE: u32 = 30;
+
+                canvas.set_draw_color(Color::RED);
+                let keystate = io.lock().unwrap().keystate;
+                for (key, &pressed) in keystate.iter().enumerate() {
+                    if key % 4 == 0 {
+                        x = start_x;
+                        y += SIZE as i32;
+                    }
+
+                    // if pressed {
+                    //     canvas.fill_rect(Rect::new(x, y, SIZE, SIZE))?;
+                    // } else {
+                    //     canvas.draw_rect(Rect::new(x, y, SIZE, SIZE))?;
+                    // }
+
+                    show_text(
+                        &mut canvas,
+                        &font,
+                        if pressed {
+                            TextBackground::Solid(Color::RED)
+                        } else {
+                            TextBackground::Transparent
+                        },
+                        x,
+                        y,
+                        &format!("{:X}", key),
+                    )?;
+
+                    x += SIZE as i32;
+                }
+            }
+
             // Draw waiting for key
             {
-                let x = 0;
-                let y = DISPLAY_HEIGHT as i32 + 10;
+                x = 10;
+                y = DISPLAY_HEIGHT as i32 + 10;
                 if let Ok(current_instr) = cpu.lock().unwrap().current_instruction() {
                     let text = match current_instr {
                         Instruction::SKPR(r) => {
