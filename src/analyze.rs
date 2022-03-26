@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::*;
@@ -28,12 +29,17 @@ struct CFG {
 
 #[derive(Clone)]
 struct Block {
-    code: Vec<Instruction>,
+    code: Vec<AnalyzeInstruction>,
     prev: Vec<Pc>,
     next: Vec<Pc>,
 
     // Other flags
     reachable: bool,
+}
+
+#[derive(Clone, Copy)]
+struct AnalyzeInstruction {
+    instruction: Instruction,
 }
 
 impl CFG {
@@ -44,7 +50,10 @@ impl CFG {
                 let this_pc = pc;
                 pc += 2;
                 if let Some(instr) = m_instr {
-                    (this_pc, Block::from_single(this_pc, instr))
+                    (
+                        this_pc,
+                        Block::from_single(this_pc, AnalyzeInstruction::new(instr)),
+                    )
                 } else {
                     (this_pc, Block::new_empty())
                 }
@@ -207,7 +216,7 @@ impl Block {
         }
     }
 
-    fn from_single(pc: Pc, instr: Instruction) -> Block {
+    fn from_single(pc: Pc, instr: AnalyzeInstruction) -> Block {
         Block {
             code: vec![instr],
             prev: vec![],
@@ -227,14 +236,13 @@ impl Block {
     }
 }
 
-trait AnalyzeInstruction {
-    fn next_pc(&self, this_pc: Pc) -> Vec<Pc>;
-    fn branches(&self) -> bool;
-}
+impl AnalyzeInstruction {
+    fn new(instruction: Instruction) -> AnalyzeInstruction {
+        Self { instruction }
+    }
 
-impl AnalyzeInstruction for Instruction {
     fn next_pc(&self, this_pc: Pc) -> Vec<Pc> {
-        match *self {
+        match self.instruction {
             SKE(_, _) | SKPR(_) | SKUP(_) | SKNE(_, _) | SKRE(_, _) | SKRNE(_, _) => {
                 vec![this_pc + 2, this_pc + 4]
             }
@@ -254,6 +262,12 @@ impl AnalyzeInstruction for Instruction {
 
     fn branches(&self) -> bool {
         self.next_pc(0).len() > 1
+    }
+}
+
+impl fmt::Display for AnalyzeInstruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.instruction)
     }
 }
 
