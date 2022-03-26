@@ -17,7 +17,7 @@ pub fn analyze(prog: SrcProgram) {
     flow_graph.reachability_analysis(0x200);
 
     println!("Control flow graph:");
-    flow_graph.debug_print(true, true);
+    flow_graph.debug_print(true, false);
     flow_graph.assert_valid();
 }
 
@@ -32,6 +32,8 @@ struct Block {
     code: Vec<AnalyzeInstruction>,
     prev: Vec<Pc>,
     next: Vec<Pc>,
+    // If the block ends in a call, place the return address here
+    return_address: Option<Pc>,
 
     // Other flags
     reachable: bool,
@@ -121,6 +123,9 @@ impl CFG {
             }
 
             print!("  -> ");
+            if let Some(ra) = block.return_address {
+                print!("[{:#x}] ", ra);
+            }
             for pc in &block.next {
                 print!("{:#x} ", pc);
             }
@@ -158,8 +163,7 @@ impl CFG {
             let keys: Vec<u16> = self.contents.keys().map(|k| *k).collect();
             progress = false;
             'step: for master_pc in keys {
-                let next_count = self.contents.get(&master_pc).unwrap().next.len();
-                if next_count == 1 {
+                if self.contents.get(&master_pc).map_or(false, |b| b.can_absorb()) {
                     let absorb_pc = self.contents.get(&master_pc).unwrap().next[0];
                     let absorb_block = self.contents.get(&absorb_pc).unwrap();
                     if absorb_block.prev.len() == 1 {
@@ -184,6 +188,18 @@ impl CFG {
                 }
             }
         }
+    }
+
+    fn get_block(&self, pc: Pc) -> &Block {
+        self.contents.get(&pc).expect(&format!("Block {}", pc))
+    }
+
+    fn get_block_mut(&mut self, pc: Pc) -> &mut Block {
+        self.contents.get_mut(&pc).expect(&format!("Block {}", pc))
+    }
+
+    fn keys(&self) -> Vec<Pc> {
+        self.contents.keys().map(|k| *k).collect()
     }
 
     fn reachability_analysis(&mut self, start: Pc) {
@@ -211,6 +227,7 @@ impl Block {
             code: Vec::new(),
             prev: Vec::new(),
             next: Vec::new(),
+            return_address: None,
 
             reachable: false,
         }
@@ -221,9 +238,14 @@ impl Block {
             code: vec![instr],
             prev: vec![],
             next: instr.next_pc(pc),
+            return_address: if instr.is_call() { Some(pc + 2) } else { None },
 
             reachable: false,
         }
+    }
+
+    fn can_absorb(&self) -> bool {
+        self.next.len() == 1 && self.return_address.is_none()
     }
 
     fn absorb_next(&mut self, mut next_block: Block) {
@@ -231,6 +253,11 @@ impl Block {
             self.next.len() == 1,
             "Tried to absorb_next where there is more than 1 next already"
         );
+        assert!(
+            self.return_address.is_none(),
+            "Tried to absorb_next where there is a return address"
+        );
+        self.return_address = next_block.return_address;
         self.next = next_block.next;
         self.code.append(&mut next_block.code)
     }
@@ -250,7 +277,7 @@ impl AnalyzeInstruction {
                 vec![addr]
             }
             CALL(addr) => {
-                vec![this_pc + 2, addr]
+                vec![addr]
             }
             // TODO: What should be the next of an RTS?
             RTS => {
@@ -262,6 +289,20 @@ impl AnalyzeInstruction {
 
     fn branches(&self) -> bool {
         self.next_pc(0).len() > 1
+    }
+
+    fn is_rts(&self) -> bool {
+        match self.instruction {
+            RTS => true,
+            _ => false,
+        }
+    }
+
+    fn is_call(&self) -> bool {
+        match self.instruction {
+            CALL { .. } => true,
+            _ => false,
+        }
     }
 }
 
