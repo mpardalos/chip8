@@ -1,6 +1,8 @@
 use std::collections::HashSet;
+use std::sync::atomic::{self, AtomicU64};
 use std::sync::{Arc, Mutex};
 
+use eframe::egui::Slider;
 use eframe::epaint::{Color32, Rect, Vec2};
 use eframe::{egui, epi};
 
@@ -23,13 +25,20 @@ pub struct Chip8Gui {
 
     checked_keys: HashSet<u8>,
     checked_registers: HashSet<u8>,
+
+    target_ips: Arc<AtomicU64>,
 }
 
 impl Chip8Gui {
-    pub fn new(cpu: Arc<Mutex<Chip8>>, io: Arc<Mutex<Chip8IO>>) -> Self {
+    pub fn new(
+        cpu: Arc<Mutex<Chip8>>,
+        io: Arc<Mutex<Chip8IO>>,
+        target_ips: Arc<AtomicU64>,
+    ) -> Self {
         Self {
             cpu,
             io,
+            target_ips,
             checked_keys: HashSet::new(),
             checked_registers: HashSet::new(),
         }
@@ -198,6 +207,15 @@ impl epi::App for Chip8Gui {
                 ui.vertical(|ui| {
                     self.chip8_display(ui);
                     self.draw_input_checking_state(ui);
+                    ui.add(
+                        Slider::from_get_set(1.0..=3000.0, |set_val| {
+                            if let Some(val) = set_val {
+                                self.target_ips.store(val as u64, atomic::Ordering::Relaxed);
+                            }
+                            self.target_ips.load(atomic::Ordering::Relaxed) as f64
+                        })
+                        .text("Target IPS"),
+                    );
                     self.run_controls(ui);
                 });
                 ui.vertical(|ui| {

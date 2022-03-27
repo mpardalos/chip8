@@ -3,6 +3,7 @@ mod cpu;
 mod gui;
 mod instruction;
 
+use std::sync::atomic::{self, AtomicU64};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
@@ -111,7 +112,8 @@ fn main() {
         } => {
             let io = Arc::new(Mutex::new(Chip8IO::new()));
             let cpu = Arc::new(Mutex::new(Chip8::new(&instruction_mem, io.clone())));
-            let gui = Chip8Gui::new(cpu.clone(), io.clone());
+            let target_ips = Arc::new(AtomicU64::new(ips));
+            let gui = Chip8Gui::new(cpu.clone(), io.clone(), target_ips.clone());
 
             if debug_io {
                 let debug_io = io.clone();
@@ -134,7 +136,8 @@ fn main() {
                     if debug_cpu {
                         println!("{}", cpu.lock().unwrap());
                     }
-                    rate_limit(ips, &mut ticker);
+
+                    rate_limit(target_ips.load(atomic::Ordering::Relaxed), &mut ticker);
                 }
             });
 
