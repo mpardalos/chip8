@@ -12,14 +12,14 @@ pub const DISPLAY_ROWS: usize = 32;
 pub const DISPLAY_COLS: usize = 64;
 
 #[derive(Debug)]
-pub struct CHIP8IO {
+pub struct Chip8IO {
     pub keystate: [bool; 16],
     pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],
 }
 
-impl CHIP8IO {
-    pub fn new() -> CHIP8IO {
-        CHIP8IO {
+impl Chip8IO {
+    pub fn new() -> Chip8IO {
+        Chip8IO {
             keystate: [false; 16],
             display: [[false; DISPLAY_COLS]; DISPLAY_ROWS],
         }
@@ -27,7 +27,7 @@ impl CHIP8IO {
 }
 
 #[derive(Debug)]
-pub struct CHIP8 {
+pub struct Chip8 {
     pub stack: Vec<u16>,
     pub pc: u16,
     pub reg: [u8; 16],
@@ -51,7 +51,7 @@ fn wkey(f: &mut fmt::Formatter<'_>, keystate: [bool; 16], key: u8) -> fmt::Resul
     if keystate[key as usize] { write!(f, "{:X}", key) } else { write!(f, "█") }
 }
 
-impl Display for CHIP8IO {
+impl Display for Chip8IO {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         wkey(f, self.keystate, 0x1)?;
         wkey(f, self.keystate, 0x2)?;
@@ -97,7 +97,7 @@ impl Display for CHIP8IO {
     }
 }
 
-impl Display for CHIP8 {
+impl Display for Chip8 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let instr = match self.current_instruction() {
             Ok(i) => format!("{}", i),
@@ -117,8 +117,8 @@ impl Display for CHIP8 {
     }
 }
 
-impl CHIP8 {
-    pub fn new(instruction_section: &[u8]) -> CHIP8 {
+impl Chip8 {
+    pub fn new(instruction_section: &[u8]) -> Chip8 {
         let mut mem = Box::new([0; 4096]);
         mem[0] = 0xF0;
         mem[1] = 0x90;
@@ -203,7 +203,7 @@ impl CHIP8 {
 
         mem[0x200..0x200 + instruction_section.len()].copy_from_slice(instruction_section);
 
-        CHIP8 {
+        Chip8 {
             reg: [0; 16],
             idx: 0,
             pc: 0x200,
@@ -226,7 +226,7 @@ impl CHIP8 {
         ]))
     }
 
-    pub fn step(&mut self, io: &Mutex<CHIP8IO>) -> Result<StepResult, String> {
+    pub fn step(&mut self, io: &Mutex<Chip8IO>) -> Result<StepResult, String> {
         use Instruction::*;
 
         if time::Instant::now() - self.tick > time::Duration::from_millis(016) {

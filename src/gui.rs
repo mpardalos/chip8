@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use eframe::epaint::{Color32, Rect, Vec2};
 use eframe::{egui, epi};
 
-use crate::cpu::{CHIP8, CHIP8IO};
+use crate::cpu::{Chip8, Chip8IO};
 use crate::cpu::{DISPLAY_COLS, DISPLAY_ROWS};
 use crate::instruction::Instruction;
 
@@ -18,15 +18,15 @@ const WINDOW_WIDTH: f32 = DISPLAY_WIDTH + 300.;
 const WINDOW_HEIGHT: f32 = DISPLAY_HEIGHT + 200.;
 
 pub struct Chip8Gui {
-    cpu: Arc<Mutex<CHIP8>>,
-    io: Arc<Mutex<CHIP8IO>>,
+    cpu: Arc<Mutex<Chip8>>,
+    io: Arc<Mutex<Chip8IO>>,
 
     checked_keys: HashSet<u8>,
     checked_registers: HashSet<u8>,
 }
 
 impl Chip8Gui {
-    pub fn new(cpu: Arc<Mutex<CHIP8>>, io: Arc<Mutex<CHIP8IO>>) -> Self {
+    pub fn new(cpu: Arc<Mutex<Chip8>>, io: Arc<Mutex<Chip8IO>>) -> Self {
         Self {
             cpu,
             io,

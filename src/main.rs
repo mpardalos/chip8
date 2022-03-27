@@ -11,7 +11,7 @@ use std::{fs, time::Duration};
 use analyze::analyze;
 use clap::Parser;
 
-use crate::cpu::{StepResult, CHIP8, CHIP8IO};
+use crate::cpu::{StepResult, Chip8, Chip8IO};
 use crate::gui::Chip8Gui;
 use crate::instruction::Instruction;
 
@@ -109,10 +109,10 @@ fn main() {
             ips,
             ..
         } => {
-            let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
+            let cpu_io = Arc::new(Mutex::new(Chip8IO::new()));
             let gui_io = cpu_io.clone();
 
-            let core_cpu = Arc::new(Mutex::new(CHIP8::new(&instruction_mem)));
+            let core_cpu = Arc::new(Mutex::new(Chip8::new(&instruction_mem)));
             let gui_cpu = core_cpu.clone();
 
             if debug_io {
