@@ -129,8 +129,9 @@ fn main() {
             let _cpu_thread = thread::spawn(move || {
                 let mut ticker = Instant::now();
                 loop {
-                    if cpu.lock().unwrap().step().unwrap() == StepResult::End {
-                        break;
+                    match cpu.lock().unwrap().step().unwrap() {
+                        StepResult::End | StepResult::Loop => break,
+                        _ => {}
                     };
 
                     if debug_cpu {
@@ -139,6 +140,7 @@ fn main() {
 
                     rate_limit(target_ips.load(atomic::Ordering::Relaxed), &mut ticker);
                 }
+                println!("CPU Stopped");
             });
 
             gui.run();

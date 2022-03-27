@@ -46,6 +46,9 @@ pub enum StepResult {
     /// Program continues. Bool specifies whether the display was updated
     Continue(bool),
 
+    /// Endlessly looping
+    Loop,
+
     /// Program ends.
     End,
 }
@@ -302,9 +305,13 @@ impl Chip8 {
             }
             // Subroutines
             CALL(addr) => {
-                self.stack.push(self.pc);
-                self.pc = addr;
-                Ok(StepResult::Continue(false))
+                if addr == self.pc {
+                    Ok(StepResult::Loop)
+                } else {
+                    self.stack.push(self.pc);
+                    self.pc = addr;
+                    Ok(StepResult::Continue(false))
+                }
             }
             RTS => {
                 if let Some(pc) = self.stack.pop() {
@@ -316,12 +323,22 @@ impl Chip8 {
             }
             // Jumps
             JUMP(ofs) => {
-                self.pc = (self.pc & 0xF000) | (ofs & 0x0FFF);
-                Ok(StepResult::Continue(false))
+                let next_pc = (self.pc & 0xF000) | (ofs & 0x0FFF);
+                if next_pc == self.pc {
+                    Ok(StepResult::Loop)
+                } else {
+                    self.pc = next_pc;
+                    Ok(StepResult::Continue(false))
+                }
             }
             JUMPI(addr) => {
-                self.pc = addr + self.reg[0] as u16;
-                Ok(StepResult::Continue(false))
+                let next_pc = addr + self.reg[0] as u16;
+                if next_pc == self.pc {
+                    Ok(StepResult::Loop)
+                } else {
+                    self.pc = next_pc;
+                    Ok(StepResult::Continue(false))
+                }
             }
             // Skip
             SKE(x, n) => {

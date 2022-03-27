@@ -167,11 +167,7 @@ impl Chip8Gui {
                 }
                 if ui.button("Step to display update").clicked() {
                     cpu.paused = false;
-                    loop {
-                        if let Ok(StepResult::Continue(true)) = cpu.step() {
-                            break;
-                        }
-                    }
+                    while cpu.step() != Ok(StepResult::Continue(true)) {}
                     cpu.paused = true;
                 }
             }
