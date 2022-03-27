@@ -11,7 +11,7 @@ use std::{fs, time::Duration};
 use analyze::analyze;
 use clap::Parser;
 
-use crate::cpu::{StepResult, Chip8, Chip8IO};
+use crate::cpu::{Chip8, Chip8IO, StepResult};
 use crate::gui::Chip8Gui;
 use crate::instruction::Instruction;
 
@@ -109,14 +109,12 @@ fn main() {
             ips,
             ..
         } => {
-            let cpu_io = Arc::new(Mutex::new(Chip8IO::new()));
-            let gui_io = cpu_io.clone();
-
-            let core_cpu = Arc::new(Mutex::new(Chip8::new(&instruction_mem)));
-            let gui_cpu = core_cpu.clone();
+            let io = Arc::new(Mutex::new(Chip8IO::new()));
+            let cpu = Arc::new(Mutex::new(Chip8::new(&instruction_mem, io.clone())));
+            let gui = Chip8Gui::new(cpu.clone(), io.clone());
 
             if debug_io {
-                let debug_io = cpu_io.clone();
+                let debug_io = io.clone();
                 let _debug_thread = thread::spawn(move || {
                     let mut ticker = Instant::now();
                     loop {
@@ -129,18 +127,18 @@ fn main() {
             let _cpu_thread = thread::spawn(move || {
                 let mut ticker = Instant::now();
                 loop {
-                    if core_cpu.lock().unwrap().step(&cpu_io).unwrap() == StepResult::End {
+                    if cpu.lock().unwrap().step().unwrap() == StepResult::End {
                         break;
                     };
 
                     if debug_cpu {
-                        println!("{}", core_cpu.lock().unwrap());
+                        println!("{}", cpu.lock().unwrap());
                     }
                     rate_limit(ips, &mut ticker);
                 }
             });
 
-            Chip8Gui::new(gui_cpu, gui_io).run();
+            gui.run();
         }
 
         Args::Analyze { .. } => {

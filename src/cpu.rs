@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Display},
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time,
 };
 
@@ -35,6 +35,7 @@ pub struct Chip8 {
     pub delay: u8,
     tick: time::Instant,
     pub mem: Box<[u8; 4096]>,
+    pub io: Arc<Mutex<Chip8IO>>,
 
     pub paused: bool,
 }
@@ -50,7 +51,11 @@ pub enum StepResult {
 }
 
 fn wkey(f: &mut fmt::Formatter<'_>, keystate: [bool; 16], key: u8) -> fmt::Result {
-    if keystate[key as usize] { write!(f, "{:X}", key) } else { write!(f, "█") }
+    if keystate[key as usize] {
+        write!(f, "{:X}", key)
+    } else {
+        write!(f, "█")
+    }
 }
 
 impl Display for Chip8IO {
@@ -120,7 +125,7 @@ impl Display for Chip8 {
 }
 
 impl Chip8 {
-    pub fn new(instruction_section: &[u8]) -> Chip8 {
+    pub fn new(instruction_section: &[u8], io: Arc<Mutex<Chip8IO>>) -> Chip8 {
         let mut mem = Box::new([0; 4096]);
         mem[0] = 0xF0;
         mem[1] = 0x90;
@@ -213,6 +218,7 @@ impl Chip8 {
             delay: 0,
             tick: time::Instant::now(),
             mem,
+            io,
             paused: false,
         }
     }
@@ -229,7 +235,7 @@ impl Chip8 {
         ]))
     }
 
-    pub fn step(&mut self, io: &Mutex<Chip8IO>) -> Result<StepResult, String> {
+    pub fn step(&mut self) -> Result<StepResult, String> {
         use Instruction::*;
 
         if self.paused {
@@ -366,7 +372,13 @@ impl Chip8 {
             // Input
             SKPR(x) => {
                 let keyidx: usize = self.reg[x as usize] as usize;
-                let pressed = *io.lock().unwrap().keystate.get(keyidx).unwrap_or(&false);
+                let pressed = *self
+                    .io
+                    .lock()
+                    .unwrap()
+                    .keystate
+                    .get(keyidx)
+                    .unwrap_or(&false);
                 if pressed {
                     self.advance(4)
                 } else {
@@ -375,7 +387,13 @@ impl Chip8 {
             }
             SKUP(x) => {
                 let keyidx: usize = self.reg[x as usize] as usize;
-                let pressed = *io.lock().unwrap().keystate.get(keyidx).unwrap_or(&false);
+                let pressed = *self
+                    .io
+                    .lock()
+                    .unwrap()
+                    .keystate
+                    .get(keyidx)
+                    .unwrap_or(&false);
                 if pressed {
                     self.advance(4)
                 } else {
@@ -383,7 +401,8 @@ impl Chip8 {
                 }
             }
             KEYD(x) => {
-                for (key, &pressed) in io.lock().unwrap().keystate.iter().enumerate() {
+                let keystate = self.io.lock().unwrap().keystate;
+                for (key, &pressed) in keystate.iter().enumerate() {
                     if pressed {
                         self.reg[x as usize] = key as u8;
                         let _ = self.advance(2);
@@ -418,31 +437,33 @@ impl Chip8 {
             }
             // Screen
             DRAW(x, y, n) => {
-                let display = &mut io.lock().unwrap().display;
                 let mut row = self.reg[y as usize] as usize;
                 let memidx = self.idx as usize;
 
-                self.reg[0x0F] = 0;
-                for byte in &self.mem[memidx..memidx + n as usize] {
-                    let mut col = self.reg[x as usize] as usize;
-                    for bitidx in 0..8 {
-                        let bit = (byte & (1 << (7 - bitidx))) != 0;
-                        if display[row % DISPLAY_ROWS][col % DISPLAY_COLS] & bit {
-                            self.reg[0x0F] = 1;
+                { // Lock IO here
+                    let display = &mut self.io.lock().unwrap().display;
+                    self.reg[0x0F] = 0;
+                    for byte in &self.mem[memidx..memidx + n as usize] {
+                        let mut col = self.reg[x as usize] as usize;
+                        for bitidx in 0..8 {
+                            let bit = (byte & (1 << (7 - bitidx))) != 0;
+                            if display[row % DISPLAY_ROWS][col % DISPLAY_COLS] & bit {
+                                self.reg[0x0F] = 1;
+                            }
+
+                            display[row % DISPLAY_ROWS][col % DISPLAY_COLS] ^= bit;
+                            col += 1;
                         }
 
-                        display[row % DISPLAY_ROWS][col % DISPLAY_COLS] ^= bit;
-                        col += 1;
+                        row += 1;
                     }
-
-                    row += 1;
                 }
 
                 let _ = self.advance(2);
                 Ok(StepResult::Continue(true))
             }
             CLR => {
-                io.lock().unwrap().display = [[false; 64]; 32];
+                self.io.lock().unwrap().display = [[false; 64]; 32];
                 self.advance(2)
             }
             // Other
