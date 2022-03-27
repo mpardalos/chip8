@@ -103,15 +103,30 @@ impl Chip8Gui {
     }
 
     fn draw_registers(&self, ui: &mut egui::Ui) -> egui::Response {
-        egui::Grid::new("chip8_keypad")
-            .show(ui, |ui| {
-                for (reg, val) in self.cpu.lock().unwrap().reg.iter().enumerate() {
-                    ui.label(format!("v{:X}", reg));
-                    ui.label(format!("v{:#x}", val));
-                    ui.end_row();
+        ui.vertical(|ui| {
+            egui::Grid::new("chip8_keypad")
+                .show(ui, |ui| {
+                    for (reg, val) in self.cpu.lock().unwrap().reg.iter().enumerate() {
+                        ui.label(format!("v{:X}", reg));
+                        ui.label(format!("v{:#x}", val));
+                        ui.end_row();
+                    }
+                })
+                .response;
+            let (pc, instr) = {
+                let cpu = self.cpu.lock().unwrap();
+                (cpu.pc, cpu.current_instruction())
+            };
+            ui.label(format!(
+                "At [{:#x}]: {}",
+                pc,
+                match instr {
+                    Ok(i) => format!("{}", i),
+                    Err(_) => "???".to_string(),
                 }
-            })
-            .response
+            ));
+        })
+        .response
     }
 
     fn draw_input_checking_state(&mut self, ui: &mut egui::Ui) {
