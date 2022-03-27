@@ -176,6 +176,7 @@ impl epi::App for Chip8Gui {
                 ui.vertical(|ui| {
                     self.chip8_display(ui);
                     self.draw_input_checking_state(ui);
+                    ui.checkbox(&mut self.cpu.lock().unwrap().paused, "Pause");
                 });
                 ui.vertical(|ui| {
                     self.draw_registers(ui);

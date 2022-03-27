@@ -35,6 +35,8 @@ pub struct Chip8 {
     pub delay: u8,
     tick: time::Instant,
     pub mem: Box<[u8; 4096]>,
+
+    pub paused: bool,
 }
 
 /// Outcome of one step of execution
@@ -211,6 +213,7 @@ impl Chip8 {
             delay: 0,
             tick: time::Instant::now(),
             mem,
+            paused: false,
         }
     }
 
@@ -228,6 +231,10 @@ impl Chip8 {
 
     pub fn step(&mut self, io: &Mutex<Chip8IO>) -> Result<StepResult, String> {
         use Instruction::*;
+
+        if self.paused {
+            return Ok(StepResult::Continue(false));
+        }
 
         if time::Instant::now() - self.tick > time::Duration::from_millis(016) {
             self.delay = self.delay.saturating_sub(1);
