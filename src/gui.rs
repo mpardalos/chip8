@@ -175,7 +175,11 @@ impl epi::App for Chip8Gui {
         _frame: &epi::Frame,
         _storage: Option<&dyn epi::Storage>,
     ) {
-        ctx.set_visuals(egui::Visuals::dark())
+        ctx.set_style(egui::Style {
+            visuals: egui::Visuals::dark(),
+            override_font_id: Some(egui::FontId::proportional(22.)),
+            ..egui::Style::default()
+        })
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
