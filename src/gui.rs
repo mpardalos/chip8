@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use eframe::epaint::{Color32, Rect, Vec2};
 use eframe::{egui, epi};
 
-use crate::cpu::{Chip8, Chip8IO};
+use crate::cpu::{Chip8, Chip8IO, StepResult};
 use crate::cpu::{DISPLAY_COLS, DISPLAY_ROWS};
 use crate::instruction::Instruction;
 
@@ -131,6 +131,28 @@ impl Chip8Gui {
             });
         }
     }
+
+    fn run_controls(&mut self, ui: &mut egui::Ui) {
+        if let Ok(mut cpu) = self.cpu.lock() {
+            ui.checkbox(&mut cpu.paused, "Pause");
+            if cpu.paused {
+                if ui.button("Step").clicked() {
+                    cpu.paused = false;
+                    let _ = cpu.step();
+                    cpu.paused = true;
+                }
+                if ui.button("Step to display update").clicked() {
+                    cpu.paused = false;
+                    loop {
+                        if let Ok(StepResult::Continue(true)) = cpu.step() {
+                            break;
+                        }
+                    }
+                    cpu.paused = true;
+                }
+            }
+        }
+    }
 }
 
 impl epi::App for Chip8Gui {
@@ -176,7 +198,7 @@ impl epi::App for Chip8Gui {
                 ui.vertical(|ui| {
                     self.chip8_display(ui);
                     self.draw_input_checking_state(ui);
-                    ui.checkbox(&mut self.cpu.lock().unwrap().paused, "Pause");
+                    self.run_controls(ui);
                 });
                 ui.vertical(|ui| {
                     self.draw_registers(ui);
