@@ -223,25 +223,26 @@ impl epi::App for Chip8Gui {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    self.chip8_display(ui);
-                    self.draw_input_checking_state(ui);
-                    ui.add(
-                        Slider::from_get_set(1.0..=3000.0, |set_val| {
-                            if let Some(val) = set_val {
-                                self.target_ips.store(val as u64, atomic::Ordering::Relaxed);
-                            }
-                            self.target_ips.load(atomic::Ordering::Relaxed) as f64
-                        })
-                        .text("Target IPS"),
-                    );
-                    self.run_controls(ui);
-                });
+                self.run_controls(ui);
+                ui.add(
+                    Slider::from_get_set(1.0..=3000.0, |set_val| {
+                        if let Some(val) = set_val {
+                            self.target_ips.store(val as u64, atomic::Ordering::Relaxed);
+                        }
+                        self.target_ips.load(atomic::Ordering::Relaxed) as f64
+                    })
+                    .text("Target IPS"),
+                );
+            });
+            ui.separator();
+            ui.horizontal(|ui| {
+                self.chip8_display(ui);
                 ui.vertical(|ui| {
                     self.draw_registers(ui);
                     self.draw_keypad(ui);
                 });
             });
+            self.draw_input_checking_state(ui);
         });
 
         frame.request_repaint();
