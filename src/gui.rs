@@ -1,255 +1,189 @@
 use std::collections::HashSet;
-use std::{sync::Mutex, time::Instant};
+use std::sync::{Arc, Mutex};
 
-use sdl2::keyboard::Scancode;
-use sdl2::{
-    event::Event,
-    pixels::Color,
-    rect::Rect,
-    render::{Canvas, TextureQuery, WindowCanvas},
-    ttf::Font,
-    video::Window,
-};
+use eframe::epaint::{Color32, Rect, Vec2};
+use eframe::{egui, epi};
 
 use crate::cpu::{CHIP8, CHIP8IO};
+use crate::cpu::{DISPLAY_COLS, DISPLAY_ROWS};
 use crate::instruction::Instruction;
-use crate::{
-    cpu::{DISPLAY_COLS, DISPLAY_ROWS},
-    rate_limit,
-};
 
 const WINDOW_NAME: &str = "CHIP8";
-const DISPLAY_WIDTH: u32 = 960;
-const DISPLAY_HEIGHT: u32 = 540;
-const PIXEL_WIDTH: u32 = DISPLAY_WIDTH / DISPLAY_COLS as u32;
-const PIXEL_HEIGHT: u32 = DISPLAY_HEIGHT / DISPLAY_ROWS as u32;
+const DISPLAY_WIDTH: f32 = 960.;
+const DISPLAY_HEIGHT: f32 = 540.;
+const PIXEL_WIDTH: f32 = DISPLAY_WIDTH / DISPLAY_COLS as f32;
+const PIXEL_HEIGHT: f32 = DISPLAY_HEIGHT / DISPLAY_ROWS as f32;
 
-const WINDOW_WIDTH: u32 = DISPLAY_WIDTH + 300;
-const WINDOW_HEIGHT: u32 = DISPLAY_HEIGHT + 200;
+const WINDOW_WIDTH: f32 = DISPLAY_WIDTH + 300.;
+const WINDOW_HEIGHT: f32 = DISPLAY_HEIGHT + 200.;
 
-pub fn run_gui(fps: u64, cpu: &Mutex<CHIP8>, io: &Mutex<CHIP8IO>) -> Result<(), String> {
-    // Load a font
-    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
-    let mut font = ttf_context
-        .load_font("/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf", 18)
-        .unwrap();
-    font.set_style(sdl2::ttf::FontStyle::BOLD);
+pub struct Chip8Gui {
+    cpu: Arc<Mutex<CHIP8>>,
+    io: Arc<Mutex<CHIP8IO>>,
 
-    let sdl_context = sdl2::init().map_err(|e| e.to_string())?;
-    let mut canvas: Canvas<Window> = sdl_context
-        .video()
-        .map_err(|e| e.to_string())?
-        .window(WINDOW_NAME, WINDOW_WIDTH, WINDOW_HEIGHT)
-        .position_centered()
-        .build()
-        .map_err(|e| e.to_string())?
-        .into_canvas()
-        .build()
-        .map_err(|e| e.to_string())?;
-    let mut event_pump = sdl_context.event_pump().map_err(|e| e.to_string())?;
+    checked_keys: HashSet<u8>,
+    checked_registers: HashSet<u8>,
+}
 
-    let mut checked_keys: HashSet<u8> = HashSet::new();
-    let mut checked_registers: HashSet<u8> = HashSet::new();
-    let mut ticker = Instant::now();
-    'running: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. } => break 'running,
-                _ => {}
+impl Chip8Gui {
+    pub fn new(cpu: Arc<Mutex<CHIP8>>, io: Arc<Mutex<CHIP8IO>>) -> Self {
+        Self {
+            cpu,
+            io,
+            checked_keys: HashSet::new(),
+            checked_registers: HashSet::new(),
+        }
+    }
+
+    pub fn run(self) {
+        eframe::run_native(
+            Box::new(self),
+            eframe::NativeOptions {
+                initial_window_size: Some(Vec2::new(WINDOW_WIDTH, WINDOW_HEIGHT)),
+                ..eframe::NativeOptions::default()
+            },
+        );
+    }
+
+    fn chip8_display(&self, ui: &mut egui::Ui) -> egui::Response {
+        let (rect, response) = ui.allocate_exact_size(
+            Vec2::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
+            egui::Sense {
+                click: false,
+                drag: false,
+                focusable: false,
+            },
+        );
+
+        let mut pos = rect.min;
+        for row in self.io.lock().unwrap().display {
+            pos.x = 0.;
+            for pixel in row {
+                ui.painter().rect(
+                    Rect::from_min_size(pos, Vec2::new(PIXEL_WIDTH + 1., PIXEL_HEIGHT + 1.)),
+                    0.,
+                    if pixel { Color32::BLUE } else { Color32::BLACK },
+                    (0., Color32::BLUE),
+                );
+                pos.x += PIXEL_WIDTH;
             }
+            pos.y += PIXEL_HEIGHT as f32;
         }
 
-        // Take input
-        let keyboard_state = event_pump.keyboard_state();
-        {
-            let keystate = &mut io.lock().unwrap().keystate;
-            keystate[0x0] = keyboard_state.is_scancode_pressed(Scancode::Num1);
-            keystate[0x1] = keyboard_state.is_scancode_pressed(Scancode::Num2);
-            keystate[0x2] = keyboard_state.is_scancode_pressed(Scancode::Num3);
-            keystate[0x3] = keyboard_state.is_scancode_pressed(Scancode::Num4);
-            keystate[0x4] = keyboard_state.is_scancode_pressed(Scancode::Q);
-            keystate[0x5] = keyboard_state.is_scancode_pressed(Scancode::W);
-            keystate[0x6] = keyboard_state.is_scancode_pressed(Scancode::E);
-            keystate[0x7] = keyboard_state.is_scancode_pressed(Scancode::R);
-            keystate[0x8] = keyboard_state.is_scancode_pressed(Scancode::A);
-            keystate[0x9] = keyboard_state.is_scancode_pressed(Scancode::S);
-            keystate[0xA] = keyboard_state.is_scancode_pressed(Scancode::D);
-            keystate[0xB] = keyboard_state.is_scancode_pressed(Scancode::F);
-            keystate[0xC] = keyboard_state.is_scancode_pressed(Scancode::Z);
-            keystate[0xD] = keyboard_state.is_scancode_pressed(Scancode::X);
-            keystate[0xE] = keyboard_state.is_scancode_pressed(Scancode::C);
-            keystate[0xF] = keyboard_state.is_scancode_pressed(Scancode::V);
-        }
+        response
+    }
 
-        canvas.set_draw_color(Color::BLACK);
-        canvas.clear();
-
-        // Draw register state
-        {
-            let mut x: i32 = DISPLAY_WIDTH as i32 + 10;
-            let mut y: i32 = 0;
-            let register_state = cpu.lock().unwrap().reg;
-            {
-                canvas.set_draw_color(Color::YELLOW);
-                canvas.draw_rect(Rect::new(
-                    x,
-                    y,
-                    font.size_of_char('O').unwrap().0 as u32 * 10,
-                    font.height() as u32 * register_state.len() as u32,
-                ))?;
-
-                for (reg, val) in register_state.iter().enumerate() {
-                    show_text(
-                        &mut canvas,
-                        &font,
-                        TextBackground::Transparent,
-                        x,
-                        y,
-                        &format!("v{:X} | {:#x}", reg, val),
-                    )?;
-                    y += font.height();
-                }
-            }
-
-            // Draw keypad
-            {
-                let start_x = x;
-                y += 5;
-                const SIZE: u32 = 30;
-
-                canvas.set_draw_color(Color::RED);
-                let keystate = io.lock().unwrap().keystate;
-                for (key, &pressed) in keystate.iter().enumerate() {
-                    if key % 4 == 0 {
-                        x = start_x;
-                        y += SIZE as i32;
+    fn draw_keypad(&self, ui: &mut egui::Ui) -> egui::Response {
+        egui::Grid::new("chip8_keypad")
+            .show(ui, |ui| {
+                for (key, &pressed) in self.io.lock().unwrap().keystate.iter().enumerate() {
+                    if key % 4 == 0 && (key != 0) {
+                        ui.end_row();
                     }
 
-                    // if pressed {
-                    //     canvas.fill_rect(Rect::new(x, y, SIZE, SIZE))?;
-                    // } else {
-                    //     canvas.draw_rect(Rect::new(x, y, SIZE, SIZE))?;
-                    // }
-
-                    show_text(
-                        &mut canvas,
-                        &font,
+                    ui.label(egui::RichText::new(&format!("{:X}", key)).background_color(
                         if pressed {
-                            TextBackground::Solid(Color::RED)
+                            Color32::RED
                         } else {
-                            TextBackground::Transparent
+                            Color32::TRANSPARENT
                         },
-                        x,
-                        y,
-                        &format!("{:X}", key),
-                    )?;
-
-                    x += SIZE as i32;
+                    ));
                 }
-            }
+            })
+            .response
+    }
 
-            // Draw waiting for key
-            {
-                x = 10;
-                y = DISPLAY_HEIGHT as i32 + 10;
-                if let Ok(current_instr) = cpu.lock().unwrap().current_instruction() {
-                    let text = match current_instr {
-                        Instruction::SKPR(r) => {
-                            let key = register_state[r as usize];
-                            checked_registers.insert(r);
-                            checked_keys.insert(key);
-                            format!("Checking {:X}", key)
-                        }
-                        Instruction::SKUP(r) => {
-                            let key = register_state[r as usize];
-                            checked_registers.insert(r);
-                            checked_keys.insert(key);
-                            format!("Checking {:X}", key)
-                        }
-                        Instruction::KEYD(_) => format!("Waiting for a key"),
-                        _ => format!(" "),
-                    };
-                    show_text(&mut canvas, &font, TextBackground::Transparent, x, y, &text)?;
-                    y += font.height();
-                    show_text(
-                        &mut canvas,
-                        &font,
-                        TextBackground::Transparent,
-                        x,
-                        y,
-                        &format!("Checked keys: {:?}", checked_keys),
-                    )?;
-                    y += font.height();
-                    show_text(
-                        &mut canvas,
-                        &font,
-                        TextBackground::Transparent,
-                        x,
-                        y,
-                        &format!("Checked registers: {:?}", checked_registers),
-                    )?;
+    fn draw_registers(&self, ui: &mut egui::Ui) -> egui::Response {
+        egui::Grid::new("chip8_keypad")
+            .show(ui, |ui| {
+                for (reg, val) in self.cpu.lock().unwrap().reg.iter().enumerate() {
+                    ui.label(format!("v{:X}", reg));
+                    ui.label(format!("v{:#x}", val));
+                    ui.end_row();
                 }
-            }
+            })
+            .response
+    }
+
+    fn draw_input_checking_state(&mut self, ui: &mut egui::Ui) {
+        let register_state = self.cpu.lock().unwrap().reg;
+        if let Ok(current_instr) = self.cpu.lock().unwrap().current_instruction() {
+            let text = match current_instr {
+                Instruction::SKPR(r) => {
+                    let key = register_state[r as usize];
+                    self.checked_registers.insert(r);
+                    self.checked_keys.insert(key);
+                    format!("Checking {:X}", key)
+                }
+                Instruction::SKUP(r) => {
+                    let key = register_state[r as usize];
+                    self.checked_registers.insert(r);
+                    self.checked_keys.insert(key);
+                    format!("Checking {:X}", key)
+                }
+                Instruction::KEYD(_) => format!("Waiting for a key"),
+                _ => format!(" "),
+            };
+            ui.vertical(|ui| {
+                ui.label(text);
+                ui.label(&format!("Checked keys: {:?}", self.checked_keys));
+                ui.label(&format!("Checked registers: {:?}", self.checked_registers))
+            });
         }
+    }
+}
 
-        // Draw display
+impl epi::App for Chip8Gui {
+    fn name(&self) -> &str {
+        WINDOW_NAME
+    }
+
+    fn setup(
+        &mut self,
+        ctx: &egui::Context,
+        _frame: &epi::Frame,
+        _storage: Option<&dyn epi::Storage>,
+    ) {
+        ctx.set_visuals(egui::Visuals::dark())
+    }
+
+    fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
+        // Take input
         {
-            let mut y: u32 = 0;
-            for row in io.lock().unwrap().display {
-                let mut x: u32 = 0;
-                for pixel in row {
-                    canvas.set_draw_color(if pixel { Color::BLUE } else { Color::BLACK });
-                    canvas.fill_rect(Rect::new(x as i32, y as i32, PIXEL_WIDTH, PIXEL_HEIGHT))?;
-                    x += PIXEL_WIDTH;
-                }
-                y += PIXEL_HEIGHT;
-            }
+            let chip8_keys = &mut self.io.lock().unwrap().keystate;
+            let pressed_keys = &ctx.input().keys_down;
 
-            // Frame timing
-            let (_, frame_time) = rate_limit(fps, &mut ticker);
-            show_text(
-                &mut canvas,
-                &font,
-                TextBackground::Solid(Color::BLACK),
-                0,
-                0,
-                &format!("{:.0}   ", 1. / frame_time.as_secs_f32()),
-            )?;
-
-            canvas.set_draw_color(Color::YELLOW);
-            canvas.draw_rect(Rect::new(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT))?;
+            chip8_keys[0x0] = pressed_keys.contains(&egui::Key::Num1);
+            chip8_keys[0x1] = pressed_keys.contains(&egui::Key::Num2);
+            chip8_keys[0x2] = pressed_keys.contains(&egui::Key::Num3);
+            chip8_keys[0x3] = pressed_keys.contains(&egui::Key::Num4);
+            chip8_keys[0x4] = pressed_keys.contains(&egui::Key::Q);
+            chip8_keys[0x5] = pressed_keys.contains(&egui::Key::W);
+            chip8_keys[0x6] = pressed_keys.contains(&egui::Key::E);
+            chip8_keys[0x7] = pressed_keys.contains(&egui::Key::R);
+            chip8_keys[0x8] = pressed_keys.contains(&egui::Key::A);
+            chip8_keys[0x9] = pressed_keys.contains(&egui::Key::S);
+            chip8_keys[0xA] = pressed_keys.contains(&egui::Key::D);
+            chip8_keys[0xB] = pressed_keys.contains(&egui::Key::F);
+            chip8_keys[0xC] = pressed_keys.contains(&egui::Key::Z);
+            chip8_keys[0xD] = pressed_keys.contains(&egui::Key::X);
+            chip8_keys[0xE] = pressed_keys.contains(&egui::Key::C);
+            chip8_keys[0xF] = pressed_keys.contains(&egui::Key::V);
         }
-        canvas.present();
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    self.chip8_display(ui);
+                    self.draw_input_checking_state(ui);
+                });
+                ui.vertical(|ui| {
+                    self.draw_registers(ui);
+                    self.draw_keypad(ui);
+                });
+            });
+        });
+
+        frame.request_repaint();
     }
-
-    Ok(())
-}
-
-#[allow(dead_code)]
-enum TextBackground {
-    Solid(Color),
-    Transparent,
-}
-
-fn show_text(
-    canvas: &mut WindowCanvas,
-    font: &Font,
-    background: TextBackground,
-    x: i32,
-    y: i32,
-    text: &str,
-) -> Result<Rect, String> {
-    let texture_creator = canvas.texture_creator();
-    let surface = match background {
-        TextBackground::Solid(bg) => font.render(text).shaded(Color::WHITE, bg),
-        TextBackground::Transparent => font.render(text).blended(Color::WHITE),
-    }
-    .map_err(|e| e.to_string())?;
-    let texture = texture_creator
-        .create_texture_from_surface(&surface)
-        .map_err(|e| e.to_string())?;
-    let TextureQuery { width, height, .. } = texture.query();
-    let target_rect = Rect::new(x, y, width, height);
-    canvas.copy(&texture, None, Some(target_rect))?;
-    Ok(target_rect)
 }

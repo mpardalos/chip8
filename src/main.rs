@@ -12,7 +12,7 @@ use analyze::analyze;
 use clap::Parser;
 
 use crate::cpu::{StepResult, CHIP8, CHIP8IO};
-use crate::gui::run_gui;
+use crate::gui::Chip8Gui;
 use crate::instruction::Instruction;
 
 /// Call this in a loop to limit how many times per second the loop runs
@@ -51,10 +51,6 @@ enum Args {
         /// Instructions per second
         #[clap(long, default_value_t = 1000)]
         ips: u64,
-
-        /// Frames per second
-        #[clap(long, default_value_t = 60)]
-        fps: u64,
 
         /// Output I/O debug information to the terminal
         #[clap(long)]
@@ -111,7 +107,6 @@ fn main() {
             debug_cpu,
             debug_io,
             ips,
-            fps,
             ..
         } => {
             let cpu_io = Arc::new(Mutex::new(CHIP8IO::new()));
@@ -145,7 +140,7 @@ fn main() {
                 }
             });
 
-            run_gui(fps, &gui_cpu, &gui_io).unwrap();
+            Chip8Gui::new(gui_cpu, gui_io).run();
         }
 
         Args::Analyze { .. } => {

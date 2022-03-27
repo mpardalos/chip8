@@ -9,4 +9,4 @@ edition = "2021"
 rand = "0.8"
 bitvec = "1"
 clap = { version = "3", features = ["derive"] }
-sdl2 = { version = "0.35", default-features = false, features = ["ttf","image","gfx"] }
+eframe = "0.17"

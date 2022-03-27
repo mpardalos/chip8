@@ -190,14 +190,17 @@ impl CFG {
         }
     }
 
+    #[allow(dead_code)]
     fn get_block(&self, pc: Pc) -> &Block {
         self.contents.get(&pc).expect(&format!("Block {}", pc))
     }
 
+    #[allow(dead_code)]
     fn get_block_mut(&mut self, pc: Pc) -> &mut Block {
         self.contents.get_mut(&pc).expect(&format!("Block {}", pc))
     }
 
+    #[allow(dead_code)]
     fn keys(&self) -> Vec<Pc> {
         self.contents.keys().map(|k| *k).collect()
     }
@@ -287,10 +290,12 @@ impl AnalyzeInstruction {
         }
     }
 
+    #[allow(dead_code)]
     fn branches(&self) -> bool {
         self.next_pc(0).len() > 1
     }
 
+    #[allow(dead_code)]
     fn is_rts(&self) -> bool {
         match self.instruction {
             RTS => true,
