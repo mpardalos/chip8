@@ -632,3 +632,45 @@ fn skup_up() {
 
     assert_eq!(cpu.reg[1], 0);
 }
+
+#[test]
+fn draw_xor_true_begin() {
+    let mut cpu = Chip8::new_test(&[DRAW(0, 1, 2)]);
+    cpu.reg[0] = 0;
+    cpu.reg[1] = 0;
+    cpu.idx = 0x300;
+    cpu.mem[0x300] = 0xFF;
+    cpu.mem[0x301] = 0xFF;
+    cpu.io.lock().unwrap().display[0][0] = true;
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[0xF], 1);
+}
+
+#[test]
+fn draw_xor_true_end() {
+    let mut cpu = Chip8::new_test(&[DRAW(0, 1, 2)]);
+    cpu.reg[0] = 0;
+    cpu.reg[1] = 0;
+    cpu.idx = 0x300;
+    cpu.mem[0x300] = 0xFF;
+    cpu.mem[0x301] = 0xFF;
+    cpu.io.lock().unwrap().display[1][7] = true;
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[0xF], 1);
+}
+
+#[test]
+fn draw_xor_false() {
+    let mut cpu = Chip8::new_test(&[DRAW(0, 1, 2)]);
+    cpu.reg[0] = 0;
+    cpu.reg[1] = 0;
+    cpu.idx = 0x300;
+    cpu.mem[0x300] = 0xFF;
+    cpu.mem[0x301] = 0xFF;
+    // cpu.io.lock().unwrap().display[0][0] = false;
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[0xF], 0);
+}
