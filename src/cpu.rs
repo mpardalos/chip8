@@ -474,7 +474,8 @@ impl Chip8 {
                 let mut row = self.reg[y as usize] as usize;
                 let memidx = self.idx as usize;
 
-                { // Lock IO here
+                {
+                    // Lock IO here
                     let display = &mut self.io.lock().unwrap().display;
                     self.reg[0x0F] = 0;
                     for byte in &self.mem[memidx..memidx + n as usize] {
