@@ -111,11 +111,15 @@ impl Chip8Gui {
         ui.vertical(|ui| {
             egui::Grid::new("chip8_keypad")
                 .show(ui, |ui| {
-                    for (reg, val) in self.cpu.lock().unwrap().reg.iter().enumerate() {
+                    let cpu = self.cpu.lock().unwrap();
+                    for (reg, val) in cpu.reg.iter().enumerate() {
                         ui.label(format!("v{:X}", reg));
                         ui.label(format!("v{:#x}", val));
                         ui.end_row();
                     }
+                    ui.label("Index");
+                    ui.label(format!("v{:#x}", cpu.idx));
+                    ui.end_row();
                 })
                 .response;
             let (pc, instr) = {
