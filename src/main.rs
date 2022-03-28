@@ -61,6 +61,10 @@ enum Args {
         #[clap(long)]
         debug_cpu: bool,
 
+        /// Use dark mode
+        #[clap(long)]
+        dark_mode: bool,
+
         /// Path to the rom file to load
         rom: String,
     },
@@ -108,12 +112,13 @@ fn main() {
             debug_cpu,
             debug_io,
             ips,
+            dark_mode,
             ..
         } => {
             let io = Arc::new(Mutex::new(Chip8IO::new()));
             let cpu = Arc::new(Mutex::new(Chip8::new(&instruction_mem, io.clone(), true)));
             let target_ips = Arc::new(AtomicU64::new(ips));
-            let gui = Chip8Gui::new(cpu.clone(), io.clone(), target_ips.clone());
+            let gui = Chip8Gui::new(cpu.clone(), io.clone(), target_ips.clone(), dark_mode);
 
             if debug_io {
                 let debug_io = io.clone();

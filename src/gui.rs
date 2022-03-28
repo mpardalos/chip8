@@ -27,6 +27,7 @@ pub struct Chip8Gui {
     checked_registers: HashSet<u8>,
 
     target_ips: Arc<AtomicU64>,
+    dark_mode: bool,
 }
 
 impl Chip8Gui {
@@ -34,11 +35,13 @@ impl Chip8Gui {
         cpu: Arc<Mutex<Chip8>>,
         io: Arc<Mutex<Chip8IO>>,
         target_ips: Arc<AtomicU64>,
+        dark_mode: bool,
     ) -> Self {
         Self {
             cpu,
             io,
             target_ips,
+            dark_mode,
             checked_keys: HashSet::new(),
             checked_registers: HashSet::new(),
         }
@@ -196,7 +199,7 @@ impl epi::App for Chip8Gui {
         _storage: Option<&dyn epi::Storage>,
     ) {
         ctx.set_style(egui::Style {
-            visuals: egui::Visuals::dark(),
+            visuals: if self.dark_mode { egui::Visuals::dark() } else { egui::Visuals::light() },
             override_font_id: Some(egui::FontId::proportional(22.)),
             ..egui::Style::default()
         })
