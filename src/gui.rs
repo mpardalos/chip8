@@ -64,6 +64,12 @@ impl Chip8Gui {
             },
         );
 
+        let (off_color, on_color) = if ui.style().visuals.dark_mode {
+            (Color32::BLACK, Color32::WHITE)
+        } else {
+            (Color32::WHITE, Color32::BLACK)
+        };
+
         let mut pos = rect.min;
         for row in self.io.lock().unwrap().display {
             pos.x = 0.;
@@ -71,8 +77,8 @@ impl Chip8Gui {
                 ui.painter().rect(
                     Rect::from_min_size(pos, Vec2::new(PIXEL_WIDTH + 1., PIXEL_HEIGHT + 1.)),
                     0.,
-                    if pixel { Color32::BLUE } else { Color32::BLACK },
-                    (0., Color32::BLUE),
+                    if pixel { on_color } else { off_color },
+                    (0., off_color),
                 );
                 pos.x += PIXEL_WIDTH;
             }
