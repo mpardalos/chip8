@@ -531,4 +531,112 @@ impl Chip8 {
             SYS(_) => Err("SYS".to_string()),
         }
     }
+
+    #[cfg(test)]
+    fn new_test(code: &[Instruction]) -> Chip8 {
+        let mut instr_ram: Vec<u8> = Vec::new();
+        for instr in code {
+            let [high, low] = u16::from(*instr).to_be_bytes();
+            instr_ram.push(high);
+            instr_ram.push(low);
+        }
+        Self::new(&instr_ram, Arc::new(Mutex::new(Chip8IO::new())), false)
+    }
+
+    #[cfg(test)]
+    fn run_to_end(&mut self) {
+        loop {
+            match self.step() {
+                Ok(StepResult::Continue(_)) => {}
+                _ => break,
+            }
+        }
+    }
+}
+
+#[test]
+fn load() {
+    use Instruction::*;
+    let mut cpu = Chip8::new_test(&[LOAD(0, 10)]);
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[0], 10);
+    assert_eq!(cpu.pc, 0x202);
+}
+
+#[test]
+fn skne_not() {
+    use Instruction::*;
+    let mut cpu = Chip8::new_test(&[SKNE(0, 10), LOAD(1, 42)]);
+    cpu.reg[0] = 10;
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[1], 42);
+    assert_eq!(cpu.pc, 0x204);
+}
+
+#[test]
+fn skne_yes() {
+    use Instruction::*;
+    let mut cpu = Chip8::new_test(&[SKNE(0, 10), LOAD(1, 42)]);
+    cpu.reg[0] = 110;
+    cpu.reg[1] = 142;
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[1], 142);
+    assert_eq!(cpu.pc, 0x204);
+}
+
+#[test]
+fn call_rts() {
+    use Instruction::*;
+    let mut cpu = Chip8::new_test(&[
+        CALL(0x210), // 0x200
+        LOAD(0, 42), // 0x202
+        SYS(0),      // 0x204
+        SYS(0),      // 0x206
+        SYS(0),      // 0x208
+        SYS(0),      // 0x20a
+        SYS(0),      // 0x20c
+        SYS(0),      // 0x20e
+        RTS,         // 0x210
+    ]);
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[0], 42);
+    assert!(cpu.stack.is_empty());
+}
+
+#[test]
+fn rand_limit() {
+    use Instruction::*;
+    for _ in 0..100 {
+        let mut cpu = Chip8::new_test(&[RAND(0, 10)]);
+        cpu.run_to_end();
+        assert!(cpu.reg[0] < 10);
+    }
+}
+
+#[test]
+fn skup_pressed() {
+    use Instruction::*;
+    let mut cpu = Chip8::new_test(&[SKUP(0), LOAD(1, 42)]);
+    cpu.reg[0] = 5;
+    cpu.io.lock().unwrap().keystate[5] = true;
+    cpu.reg[1] = 0;
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[1], 42);
+}
+
+#[test]
+fn skup_up() {
+    use Instruction::*;
+    let mut cpu = Chip8::new_test(&[SKUP(0), LOAD(1, 42)]);
+    cpu.reg[0] = 5;
+    cpu.io.lock().unwrap().keystate[5] = false;
+    cpu.reg[1] = 0;
+    cpu.run_to_end();
+
+    assert_eq!(cpu.reg[1], 0);
 }
