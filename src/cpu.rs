@@ -428,7 +428,7 @@ impl Chip8 {
                     .keystate
                     .get(keyidx)
                     .unwrap_or(&false);
-                if pressed {
+                if !pressed {
                     self.advance(4)
                 } else {
                     self.advance(2)
