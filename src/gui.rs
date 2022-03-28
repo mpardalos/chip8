@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::sync::atomic::{self, AtomicU64};
 use std::sync::{Arc, Mutex};
 
@@ -8,7 +7,6 @@ use eframe::{egui, epi};
 
 use crate::cpu::{Chip8, Chip8IO, StepResult, KEYPAD_TO_QWERTY};
 use crate::cpu::{DISPLAY_COLS, DISPLAY_ROWS};
-use crate::instruction::Instruction;
 
 const WINDOW_NAME: &str = "CHIP8";
 const DISPLAY_WIDTH: f32 = 960.;
@@ -22,9 +20,6 @@ const WINDOW_HEIGHT: f32 = DISPLAY_HEIGHT + 200.;
 pub struct Chip8Gui {
     cpu: Arc<Mutex<Chip8>>,
     io: Arc<Mutex<Chip8IO>>,
-
-    checked_keys: HashSet<u8>,
-    checked_registers: HashSet<u8>,
 
     target_ips: Arc<AtomicU64>,
     dark_mode: bool,
@@ -42,8 +37,6 @@ impl Chip8Gui {
             io,
             target_ips,
             dark_mode,
-            checked_keys: HashSet::new(),
-            checked_registers: HashSet::new(),
         }
     }
 
@@ -141,33 +134,6 @@ impl Chip8Gui {
         .response
     }
 
-    fn draw_input_checking_state(&mut self, ui: &mut egui::Ui) {
-        let register_state = self.cpu.lock().unwrap().reg;
-        if let Ok(current_instr) = self.cpu.lock().unwrap().current_instruction() {
-            let text = match current_instr {
-                Instruction::SKPR(r) => {
-                    let key = register_state[r as usize];
-                    self.checked_registers.insert(r);
-                    self.checked_keys.insert(key);
-                    format!("Checking {:X}", key)
-                }
-                Instruction::SKUP(r) => {
-                    let key = register_state[r as usize];
-                    self.checked_registers.insert(r);
-                    self.checked_keys.insert(key);
-                    format!("Checking {:X}", key)
-                }
-                Instruction::KEYD(_) => format!("Waiting for a key"),
-                _ => format!(" "),
-            };
-            ui.vertical(|ui| {
-                ui.label(text);
-                ui.label(&format!("Checked keys: {:?}", self.checked_keys));
-                ui.label(&format!("Checked registers: {:?}", self.checked_registers))
-            });
-        }
-    }
-
     fn run_controls(&mut self, ui: &mut egui::Ui) {
         if let Ok(mut cpu) = self.cpu.lock() {
             if ui.button("Reset").clicked() {
@@ -243,7 +209,6 @@ impl epi::App for Chip8Gui {
                     self.draw_keypad(ui);
                 });
             });
-            self.draw_input_checking_state(ui);
         });
 
         frame.request_repaint();
