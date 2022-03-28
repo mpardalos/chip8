@@ -53,13 +53,9 @@ enum Args {
         #[clap(long, default_value_t = 1000)]
         ips: u64,
 
-        /// Output I/O debug information to the terminal
-        #[clap(long)]
-        debug_io: bool,
-
         /// Output CPU debug information to the terminal
         #[clap(long)]
-        debug_cpu: bool,
+        trace_cpu: bool,
 
         /// Use dark mode
         #[clap(long)]
@@ -109,8 +105,7 @@ fn main() {
         }
 
         Args::Run {
-            debug_cpu,
-            debug_io,
+            trace_cpu,
             ips,
             dark_mode,
             ..
@@ -120,26 +115,15 @@ fn main() {
             let target_ips = Arc::new(AtomicU64::new(ips));
             let gui = Chip8Gui::new(cpu.clone(), io.clone(), target_ips.clone(), dark_mode);
 
-            if debug_io {
-                let debug_io = io.clone();
-                let _debug_thread = thread::spawn(move || {
-                    let mut ticker = Instant::now();
-                    loop {
-                        println!("{}", debug_io.lock().unwrap());
-                        rate_limit(2, &mut ticker);
-                    }
-                });
-            }
-
-            let _cpu_thread = thread::spawn(move || {
+            thread::spawn(move || {
                 let mut ticker = Instant::now();
                 loop {
-                    match cpu.lock().unwrap().step().unwrap() {
-                        StepResult::End | StepResult::Loop => break,
-                        _ => {}
+                    match cpu.lock().unwrap().step() {
+                        Ok(StepResult::Continue(_)) => {}
+                        _ => break,
                     };
 
-                    if debug_cpu {
+                    if trace_cpu {
                         println!("{}", cpu.lock().unwrap());
                     }
 
