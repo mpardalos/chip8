@@ -7,6 +7,7 @@ use std::{
 use rand::prelude::*;
 
 use crate::instruction::Instruction;
+use Instruction::*;
 
 pub const DISPLAY_ROWS: usize = 32;
 pub const DISPLAY_COLS: usize = 64;
@@ -256,8 +257,6 @@ impl Chip8 {
     }
 
     pub fn step(&mut self) -> Result<StepResult, String> {
-        use Instruction::*;
-
         if self.paused {
             return Ok(StepResult::Continue(false));
         }
@@ -556,7 +555,6 @@ impl Chip8 {
 
 #[test]
 fn load() {
-    use Instruction::*;
     let mut cpu = Chip8::new_test(&[LOAD(0, 10)]);
     cpu.run_to_end();
 
@@ -566,7 +564,6 @@ fn load() {
 
 #[test]
 fn skne_not() {
-    use Instruction::*;
     let mut cpu = Chip8::new_test(&[SKNE(0, 10), LOAD(1, 42)]);
     cpu.reg[0] = 10;
     cpu.run_to_end();
@@ -577,7 +574,6 @@ fn skne_not() {
 
 #[test]
 fn skne_yes() {
-    use Instruction::*;
     let mut cpu = Chip8::new_test(&[SKNE(0, 10), LOAD(1, 42)]);
     cpu.reg[0] = 110;
     cpu.reg[1] = 142;
@@ -589,7 +585,6 @@ fn skne_yes() {
 
 #[test]
 fn call_rts() {
-    use Instruction::*;
     let mut cpu = Chip8::new_test(&[
         CALL(0x210), // 0x200
         LOAD(0, 42), // 0x202
@@ -609,7 +604,6 @@ fn call_rts() {
 
 #[test]
 fn rand_limit() {
-    use Instruction::*;
     for _ in 0..100 {
         let mut cpu = Chip8::new_test(&[RAND(0, 10)]);
         cpu.run_to_end();
@@ -619,7 +613,6 @@ fn rand_limit() {
 
 #[test]
 fn skup_pressed() {
-    use Instruction::*;
     let mut cpu = Chip8::new_test(&[SKUP(0), LOAD(1, 42)]);
     cpu.reg[0] = 5;
     cpu.io.lock().unwrap().keystate[5] = true;
@@ -631,7 +624,6 @@ fn skup_pressed() {
 
 #[test]
 fn skup_up() {
-    use Instruction::*;
     let mut cpu = Chip8::new_test(&[SKUP(0), LOAD(1, 42)]);
     cpu.reg[0] = 5;
     cpu.io.lock().unwrap().keystate[5] = false;
