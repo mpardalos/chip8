@@ -158,6 +158,9 @@ impl Chip8Gui {
 
     fn run_controls(&mut self, ui: &mut egui::Ui) {
         if let Ok(mut cpu) = self.cpu.lock() {
+            if ui.button("Reset").clicked() {
+                cpu.reset();
+            }
             ui.checkbox(&mut cpu.paused, "Pause");
             if cpu.paused {
                 if ui.button("Step").clicked() {

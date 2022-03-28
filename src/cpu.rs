@@ -24,6 +24,10 @@ impl Chip8IO {
             display: [[false; DISPLAY_COLS]; DISPLAY_ROWS],
         }
     }
+
+    pub fn reset(&mut self) {
+        *self = Self::new();
+    }
 }
 
 #[derive(Debug)]
@@ -34,6 +38,7 @@ pub struct Chip8 {
     pub idx: u16,
     pub delay: u8,
     tick: time::Instant,
+    init_mem: Box<[u8; 4096]>,
     pub mem: Box<[u8; 4096]>,
     pub io: Arc<Mutex<Chip8IO>>,
 
@@ -220,6 +225,7 @@ impl Chip8 {
             stack: Vec::new(),
             delay: 0,
             tick: time::Instant::now(),
+            init_mem: mem.clone(),
             mem,
             io,
             paused: false,
@@ -229,6 +235,17 @@ impl Chip8 {
     fn advance(&mut self, amount: u16) -> Result<StepResult, String> {
         self.pc += amount;
         Ok(StepResult::Continue(false))
+    }
+
+    pub fn reset(&mut self) {
+        self.reg = [0; 16];
+        self.idx = 0;
+        self.pc = 0x200;
+        self.stack = Vec::new();
+        self.delay = 0;
+        self.tick = time::Instant::now();
+        self.mem = self.init_mem.clone();
+        self.io.lock().unwrap().reset();
     }
 
     pub fn current_instruction(&self) -> Result<Instruction, String> {
