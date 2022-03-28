@@ -6,7 +6,7 @@ use eframe::egui::Slider;
 use eframe::epaint::{Color32, Rect, Vec2};
 use eframe::{egui, epi};
 
-use crate::cpu::{Chip8, Chip8IO, StepResult};
+use crate::cpu::{Chip8, Chip8IO, StepResult, KEYPAD_TO_QWERTY};
 use crate::cpu::{DISPLAY_COLS, DISPLAY_ROWS};
 use crate::instruction::Instruction;
 
@@ -94,18 +94,21 @@ impl Chip8Gui {
     fn draw_keypad(&self, ui: &mut egui::Ui) -> egui::Response {
         egui::Grid::new("chip8_keypad")
             .show(ui, |ui| {
-                for (key, &pressed) in self.io.lock().unwrap().keystate.iter().enumerate() {
-                    if key % 4 == 0 && (key != 0) {
+                for (idx, &keypad_key) in KEYPAD_TO_QWERTY.keys().enumerate() {
+                    let pressed = self.io.lock().unwrap().keystate[keypad_key as usize];
+                    if idx % 4 == 0 && (idx != 0) {
                         ui.end_row();
                     }
 
-                    ui.label(egui::RichText::new(&format!("{:X}", key)).background_color(
-                        if pressed {
-                            Color32::RED
-                        } else {
-                            Color32::TRANSPARENT
-                        },
-                    ));
+                    ui.label(
+                        egui::RichText::new(&format!("{:X}", keypad_key)).background_color(
+                            if pressed {
+                                Color32::RED
+                            } else {
+                                Color32::TRANSPARENT
+                            },
+                        ),
+                    );
                 }
             })
             .response
@@ -199,34 +202,24 @@ impl epi::App for Chip8Gui {
         _storage: Option<&dyn epi::Storage>,
     ) {
         ctx.set_style(egui::Style {
-            visuals: if self.dark_mode { egui::Visuals::dark() } else { egui::Visuals::light() },
+            visuals: if self.dark_mode {
+                egui::Visuals::dark()
+            } else {
+                egui::Visuals::light()
+            },
             override_font_id: Some(egui::FontId::proportional(22.)),
             ..egui::Style::default()
         })
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
-        // Take input
         {
             let chip8_keys = &mut self.io.lock().unwrap().keystate;
             let pressed_keys = &ctx.input().keys_down;
-
-            chip8_keys[0x0] = pressed_keys.contains(&egui::Key::Num1);
-            chip8_keys[0x1] = pressed_keys.contains(&egui::Key::Num2);
-            chip8_keys[0x2] = pressed_keys.contains(&egui::Key::Num3);
-            chip8_keys[0x3] = pressed_keys.contains(&egui::Key::Num4);
-            chip8_keys[0x4] = pressed_keys.contains(&egui::Key::Q);
-            chip8_keys[0x5] = pressed_keys.contains(&egui::Key::W);
-            chip8_keys[0x6] = pressed_keys.contains(&egui::Key::E);
-            chip8_keys[0x7] = pressed_keys.contains(&egui::Key::R);
-            chip8_keys[0x8] = pressed_keys.contains(&egui::Key::A);
-            chip8_keys[0x9] = pressed_keys.contains(&egui::Key::S);
-            chip8_keys[0xA] = pressed_keys.contains(&egui::Key::D);
-            chip8_keys[0xB] = pressed_keys.contains(&egui::Key::F);
-            chip8_keys[0xC] = pressed_keys.contains(&egui::Key::Z);
-            chip8_keys[0xD] = pressed_keys.contains(&egui::Key::X);
-            chip8_keys[0xE] = pressed_keys.contains(&egui::Key::C);
-            chip8_keys[0xF] = pressed_keys.contains(&egui::Key::V);
+            for key in 0..chip8_keys.len() {
+                chip8_keys[key] =
+                    pressed_keys.contains(&key_for_char(KEYPAD_TO_QWERTY[&(key as u8)]).unwrap())
+            }
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -254,5 +247,47 @@ impl epi::App for Chip8Gui {
         });
 
         frame.request_repaint();
+    }
+}
+
+fn key_for_char(value: char) -> Option<egui::Key> {
+    match value {
+        '1' => Some(egui::Key::Num1),
+        '2' => Some(egui::Key::Num2),
+        '3' => Some(egui::Key::Num3),
+        '4' => Some(egui::Key::Num4),
+        '5' => Some(egui::Key::Num5),
+        '6' => Some(egui::Key::Num6),
+        '7' => Some(egui::Key::Num7),
+        '8' => Some(egui::Key::Num8),
+        '9' => Some(egui::Key::Num9),
+        '0' => Some(egui::Key::Num0),
+        'q' | 'Q' => Some(egui::Key::Q),
+        'w' | 'W' => Some(egui::Key::W),
+        'e' | 'E' => Some(egui::Key::E),
+        'r' | 'R' => Some(egui::Key::R),
+        't' | 'T' => Some(egui::Key::T),
+        'y' | 'Y' => Some(egui::Key::Y),
+        'u' | 'U' => Some(egui::Key::U),
+        'i' | 'I' => Some(egui::Key::I),
+        'o' | 'O' => Some(egui::Key::O),
+        'p' | 'P' => Some(egui::Key::P),
+        'a' | 'A' => Some(egui::Key::A),
+        's' | 'S' => Some(egui::Key::S),
+        'd' | 'D' => Some(egui::Key::D),
+        'f' | 'F' => Some(egui::Key::F),
+        'g' | 'G' => Some(egui::Key::G),
+        'h' | 'H' => Some(egui::Key::H),
+        'j' | 'J' => Some(egui::Key::J),
+        'k' | 'K' => Some(egui::Key::K),
+        'l' | 'L' => Some(egui::Key::L),
+        'z' | 'Z' => Some(egui::Key::Z),
+        'x' | 'X' => Some(egui::Key::X),
+        'c' | 'C' => Some(egui::Key::C),
+        'v' | 'V' => Some(egui::Key::V),
+        'b' | 'B' => Some(egui::Key::B),
+        'n' | 'N' => Some(egui::Key::N),
+        'm' | 'M' => Some(egui::Key::M),
+        _ => None,
     }
 }

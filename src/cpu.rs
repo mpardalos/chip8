@@ -4,6 +4,7 @@ use std::{
     time,
 };
 
+use phf::{phf_map, phf_ordered_map};
 use rand::prelude::*;
 
 use crate::instruction::Instruction;
@@ -17,6 +18,38 @@ pub struct Chip8IO {
     pub keystate: [bool; 16],
     pub display: [[bool; DISPLAY_COLS]; DISPLAY_ROWS],
 }
+
+/*******************\
+* Keypad mapping    *
+*                   *
+* QWERTY  | Chip-8  *
+* --------+-------- *
+* 1 2 3 4 | 1 2 3 C *
+* Q W E R | 4 5 6 D *
+* A S D F | 7 8 9 E *
+* Z X C V | A 0 B F *
+\*******************/
+pub const KEYPAD_TO_QWERTY: phf::OrderedMap<u8, char> = phf_ordered_map! {
+  0x1u8 => '1',
+  0x2u8 => '2',
+  0x3u8 => '3',
+  0xCu8 => '4',
+
+  0x4u8 => 'Q',
+  0x5u8 => 'W',
+  0x6u8 => 'E',
+  0xDu8 => 'R',
+
+  0x7u8 => 'A',
+  0x8u8 => 'S',
+  0x9u8 => 'D',
+  0xEu8 => 'F',
+
+  0xAu8 => 'Z',
+  0x0u8 => 'X',
+  0xBu8 => 'C',
+  0xFu8 => 'V',
+};
 
 impl Chip8IO {
     pub fn new() -> Chip8IO {

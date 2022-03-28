@@ -10,3 +10,4 @@ rand = "0.8"
 bitvec = "1"
 clap = { version = "3", features = ["derive"] }
 eframe = "0.17"
+phf = { version = "0.10", features = ["macros"] }
