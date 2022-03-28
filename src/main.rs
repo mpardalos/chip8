@@ -111,7 +111,7 @@ fn main() {
             ..
         } => {
             let io = Arc::new(Mutex::new(Chip8IO::new()));
-            let cpu = Arc::new(Mutex::new(Chip8::new(&instruction_mem, io.clone())));
+            let cpu = Arc::new(Mutex::new(Chip8::new(&instruction_mem, io.clone(), true)));
             let target_ips = Arc::new(AtomicU64::new(ips));
             let gui = Chip8Gui::new(cpu.clone(), io.clone(), target_ips.clone());
 

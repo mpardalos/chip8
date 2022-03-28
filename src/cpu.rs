@@ -133,7 +133,7 @@ impl Display for Chip8 {
 }
 
 impl Chip8 {
-    pub fn new(instruction_section: &[u8], io: Arc<Mutex<Chip8IO>>) -> Chip8 {
+    pub fn new(instruction_section: &[u8], io: Arc<Mutex<Chip8IO>>, paused: bool) -> Chip8 {
         let mut mem = Box::new([0; 4096]);
         mem[0] = 0xF0;
         mem[1] = 0x90;
@@ -228,7 +228,7 @@ impl Chip8 {
             init_mem: mem.clone(),
             mem,
             io,
-            paused: false,
+            paused,
         }
     }
 
