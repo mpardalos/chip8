@@ -8,26 +8,40 @@ pub type ShortVal = u8;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Instruction {
-    /// Opcode: 0nnn
-    SYS(u16),
     /// Opcode: 00E0
     CLR,
     /// Opcode: 00EE
     RTS,
+
+    /// Opcode: Dxyn
+    DRAW(ShortVal, Reg, Reg),
+
+    /// Opcode: 0nnn
+    SYS(u16),
     /// Opcode: 1nnn
     JUMP(Addr),
     /// Opcode: 2nnn
     CALL(Addr),
+    /// Opcode: Annn
+    LOADI(Addr),
+    /// Opcode: Bnnn
+    JUMPI(Addr),
+
     /// Opcode: 3xnn
     SKE(Reg, RegVal),
     /// Opcode: 4xnn
     SKNE(Reg, RegVal),
-    /// Opcode: 5xy0
-    SKRE(Reg, Reg),
     /// Opcode: 6xnn
     LOAD(Reg, RegVal),
     /// Opcode: 7xnn
     ADD(Reg, RegVal),
+    /// Opcode: Cxnn
+    RAND(Reg, RegVal),
+
+    /// Opcode: 5xy0
+    SKRE(Reg, Reg),
+    /// Opcode: 9xy0
+    SKRNE(Reg, Reg),
     /// Opcode: 8xy0
     MOVE(Reg, Reg),
     /// Opcode: 8xy1
@@ -44,16 +58,7 @@ pub enum Instruction {
     SHR(Reg, Reg),
     /// Opcode: 8xyE
     SHL(Reg, Reg),
-    /// Opcode: 9xy0
-    SKRNE(Reg, Reg),
-    /// Opcode: Annn
-    LOADI(Addr),
-    /// Opcode: Bnnn
-    JUMPI(Addr),
-    /// Opcode: Cxnn
-    RAND(Reg, RegVal),
-    /// Opcode: Dxyn
-    DRAW(ShortVal, Reg, Reg),
+
     /// Opcode: Ex9E
     SKPR(Reg),
     /// Opcode: ExA1
@@ -82,40 +87,45 @@ impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Instruction::*;
         match self {
-            CLR           => write!(f, "CLR"),
-            RTS           => write!(f, "RTS"),
-            SYS(addr)     => write!(f, "SYS   {:#x}", addr),
-            JUMP(addr)    => write!(f, "JUMP  {:#x}", addr),
-            CALL(addr)    => write!(f, "CALL  {:#x}", addr),
-            LOADI(addr)   => write!(f, "LOADI {:#x}", addr),
-            JUMPI(addr)   => write!(f, "JUMPI {:#x}", addr),
-            SKE(x, n)     => write!(f, "SKE   v{:X}, {:#x}", x, n),
-            SKNE(x, n)    => write!(f, "SKNE  v{:X}, {:#x}", x, n),
-            LOAD(x, n)    => write!(f, "LOAD  v{:X}, {:#x}", x, n),
-            ADD(x, n)     => write!(f, "ADD   v{:X}, {:#x}", x, n),
-            RAND(x, n)    => write!(f, "RAND  v{:X}, {:#x}", x, n),
-            SKRE(x, y)    => write!(f, "SKRE  v{:X}, v{:X}", x, y),
-            MOVE(x, y)    => write!(f, "MOVE  v{:X}, v{:X}", x, y),
-            OR(x, y)      => write!(f, "OR    v{:X}, v{:X}", x, y),
-            AND(x, y)     => write!(f, "AND   v{:X}, v{:X}", x, y),
-            XOR(x, y)     => write!(f, "XOR   v{:X}, v{:X}", x, y),
-            ADDR(x, y)    => write!(f, "ADDR  v{:X}, v{:X}", x, y),
-            SUB(x, y)     => write!(f, "SUB   v{:X}, v{:X}", x, y),
-            SHR(x, y)     => write!(f, "SHR   v{:X}, v{:X}", x, y),
-            SHL(x, y)     => write!(f, "SHL   v{:X}, v{:X}", x, y),
-            SKRNE(x, y)   => write!(f, "SKRNE v{:X}, v{:X}", x, y),
+            CLR => write!(f, "CLR"),
+            RTS => write!(f, "RTS"),
+
             DRAW(x, y, n) => write!(f, "DRAW  v{:X}, v{:X}, {:#x}", x, y, n),
-            SKPR(x)       => write!(f, "SKPR  v{:X}", x),
-            SKUP(x)       => write!(f, "SKUP  v{:X}", x),
-            MOVED(x)      => write!(f, "MOVED v{:X}", x),
-            KEYD(x)       => write!(f, "KEYD  v{:X}", x),
-            LOADD(x)      => write!(f, "LOADD v{:X}", x),
-            LOADS(x)      => write!(f, "LOADS v{:X}", x),
-            ADDI(x)       => write!(f, "ADDI  v{:X}", x),
-            LDSPR(x)      => write!(f, "LDSPR v{:X}", x),
-            BCD(x)        => write!(f, "BCD   v{:X}", x),
-            STOR(x)       => write!(f, "STOR  v{:X}", x),
-            READ(x)       => write!(f, "READ  v{:X}", x),
+
+            SYS(addr) => write!(f, "SYS   {:#x}", addr),
+            JUMP(addr) => write!(f, "JUMP  {:#x}", addr),
+            CALL(addr) => write!(f, "CALL  {:#x}", addr),
+            LOADI(addr) => write!(f, "LOADI {:#x}", addr),
+            JUMPI(addr) => write!(f, "JUMPI {:#x}", addr),
+
+            SKE(x, n) => write!(f, "SKE   v{:X}, {:#x}", x, n),
+            SKNE(x, n) => write!(f, "SKNE  v{:X}, {:#x}", x, n),
+            LOAD(x, n) => write!(f, "LOAD  v{:X}, {:#x}", x, n),
+            ADD(x, n) => write!(f, "ADD   v{:X}, {:#x}", x, n),
+            RAND(x, n) => write!(f, "RAND  v{:X}, {:#x}", x, n),
+
+            SKRE(x, y) => write!(f, "SKRE  v{:X}, v{:X}", x, y),
+            SKRNE(x, y) => write!(f, "SKRNE v{:X}, v{:X}", x, y),
+            MOVE(x, y) => write!(f, "MOVE  v{:X}, v{:X}", x, y),
+            OR(x, y) => write!(f, "OR    v{:X}, v{:X}", x, y),
+            AND(x, y) => write!(f, "AND   v{:X}, v{:X}", x, y),
+            XOR(x, y) => write!(f, "XOR   v{:X}, v{:X}", x, y),
+            ADDR(x, y) => write!(f, "ADDR  v{:X}, v{:X}", x, y),
+            SUB(x, y) => write!(f, "SUB   v{:X}, v{:X}", x, y),
+            SHR(x, y) => write!(f, "SHR   v{:X}, v{:X}", x, y),
+            SHL(x, y) => write!(f, "SHL   v{:X}, v{:X}", x, y),
+
+            SKPR(x) => write!(f, "SKPR  v{:X}", x),
+            SKUP(x) => write!(f, "SKUP  v{:X}", x),
+            MOVED(x) => write!(f, "MOVED v{:X}", x),
+            KEYD(x) => write!(f, "KEYD  v{:X}", x),
+            LOADD(x) => write!(f, "LOADD v{:X}", x),
+            LOADS(x) => write!(f, "LOADS v{:X}", x),
+            ADDI(x) => write!(f, "ADDI  v{:X}", x),
+            LDSPR(x) => write!(f, "LDSPR v{:X}", x),
+            BCD(x) => write!(f, "BCD   v{:X}", x),
+            STOR(x) => write!(f, "STOR  v{:X}", x),
+            READ(x) => write!(f, "READ  v{:X}", x),
         }
     }
 }
