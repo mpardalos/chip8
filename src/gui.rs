@@ -210,6 +210,7 @@ impl epi::App for Chip8Gui {
                 self.chip8_display(ui);
                 ui.vertical(|ui| {
                     self.draw_registers(ui);
+                    ui.separator();
                     self.draw_keypad(ui);
                 });
             });
