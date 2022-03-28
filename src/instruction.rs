@@ -207,3 +207,55 @@ impl TryFrom<u16> for Instruction {
         }
     }
 }
+
+impl From<Instruction> for u16 {
+    fn from(instr: Instruction) -> Self {
+        use Instruction::*;
+        match instr {
+            CLR => 0x00E0,
+            RTS => 0x00EE,
+
+            DRAW(x, y, n) => {
+                0xD000
+                    | (((x as u16) << 8) & 0x0F00)
+                    | (((y as u16) << 4) & 0x00F0)
+                    | ((n as u16) & 0x000F)
+            }
+
+            SYS(addr) => 0x0000 | (addr & 0x0FFF),
+            JUMP(addr) => 0x1000 | (addr & 0x0FFF),
+            CALL(addr) => 0x2000 | (addr & 0x0FFF),
+            LOADI(addr) => 0xA000 | (addr & 0x0FFF),
+            JUMPI(addr) => 0xB000 | (addr & 0x0FFF),
+
+            SKE(r, v) => 0x3000 | 0x0F00 & ((r as u16) << 8) | (0x00FF & v as u16),
+            SKNE(r, v) => 0x4000 | 0x0F00 & ((r as u16) << 8) | (0x00FF & v as u16),
+            LOAD(r, v) => 0x6000 | 0x0F00 & ((r as u16) << 8) | (0x00FF & v as u16),
+            ADD(r, v) => 0x7000 | 0x0F00 & ((r as u16) << 8) | (0x00FF & v as u16),
+            RAND(r, v) => 0xC000 | 0x0F00 & ((r as u16) << 8) | (0x00FF & v as u16),
+
+            SKRE(r1, r2) => 0x5000 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            SKRNE(r1, r2) => 0x9000 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            MOVE(r1, r2) => 0x8000 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            OR(r1, r2) => 0x8001 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            AND(r1, r2) => 0x8002 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            XOR(r1, r2) => 0x8003 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            ADDR(r1, r2) => 0x8004 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            SUB(r1, r2) => 0x8005 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            SHR(r1, r2) => 0x8006 | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+            SHL(r1, r2) => 0x800E | 0x0F00 & ((r1 as u16) << 8) | (0x00F0 & r2 as u16),
+
+            SKPR(r) => 0xE09E | 0x0F00 & ((r as u16) << 8),
+            SKUP(r) => 0xE0A1 | 0x0F00 & ((r as u16) << 8),
+            MOVED(r) => 0xF007 | 0x0F00 & ((r as u16) << 8),
+            KEYD(r) => 0xF00A | 0x0F00 & ((r as u16) << 8),
+            LOADD(r) => 0xF015 | 0x0F00 & ((r as u16) << 8),
+            LOADS(r) => 0xF018 | 0x0F00 & ((r as u16) << 8),
+            ADDI(r) => 0xF01E | 0x0F00 & ((r as u16) << 8),
+            LDSPR(r) => 0xF029 | 0x0F00 & ((r as u16) << 8),
+            BCD(r) => 0xF033 | 0x0F00 & ((r as u16) << 8),
+            STOR(r) => 0xF055 | 0x0F00 & ((r as u16) << 8),
+            READ(r) => 0xF065 | 0x0F00 & ((r as u16) << 8),
+        }
+    }
+}
