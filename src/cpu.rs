@@ -4,7 +4,7 @@ use std::{
     time,
 };
 
-use phf::{phf_map, phf_ordered_map};
+use phf::phf_ordered_map;
 use rand::prelude::*;
 
 use crate::instruction::Instruction;
